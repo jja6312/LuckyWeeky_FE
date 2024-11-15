@@ -127,8 +127,8 @@ const Login = () => {
           </div>
           <button
             type="submit"
-            className="w-full py-3 mb-4 text-white rounded"
-            style={{ backgroundColor: "#463198" }}
+            className="w-full py-3 mb-4 text-white rounded bg-[#463198]
+             hover:bg-[#2f216b] transition-all duration-150"
           >
             로그인
           </button>
