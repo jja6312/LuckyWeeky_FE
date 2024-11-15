@@ -22,7 +22,6 @@ jobs:
 
       - name: Build React project
         run: |
-          cd src/main/webapp
           npm install --legacy-peer-deps --loglevel=error
           CI=false npm run build
 
