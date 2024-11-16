@@ -1,0 +1,80 @@
+/* css/scheduleModal.module.css */
+.modal {
+  position: absolute;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  width: 420px;
+  padding: 24px;
+  transform-origin: top left;
+  z-index: 50; /* 기존 z-10보다 높게 설정 */
+}
+
+.fadeIn {
+  animation: growAndFadeIn 0.2s ease-in-out forwards;
+}
+
+.fadeOut {
+  animation: shrinkAndFadeOut 0.2s ease-in-out forwards;
+}
+
+@keyframes growAndFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shrinkAndFadeOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+.cancelButton {
+  flex: 1;
+  padding: 8px;
+  background-color: #e5e5e5;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.saveButton {
+  flex: 1;
+  padding: 8px;
+  background-color: #463198;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.cancelButton:hover {
+  background-color: #d4d4d4;
+}
+
+.saveButton:hover {
+  background-color: #312a7a;
+}
+
+/* 색상 팔레트 스타일 */
+.color-palette {
+  display: flex;
+  flex-wrap: wrap;
+  width: 40px;
+  padding: 2px;
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.2);
+}
