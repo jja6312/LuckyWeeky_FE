@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import useScheduleStore from "../stores/useScheduleStore";
 import { format, parse, addMinutes, subMinutes } from "date-fns";
-import { FaCheckSquare, FaRegSquare } from "react-icons/fa";
 
 import { FaEdit } from "react-icons/fa";
+import SlideTitle from "./SlideTitle";
+import useStore from "../stores/useStore";
 
 const DetailSchedule = () => {
+  const { setSelectedIcon } = useStore();
   const { subschedules } = useScheduleStore();
   const selectedSchedule = useScheduleStore((state) => state.selectedSchedule);
   const mainSchedules = useScheduleStore((state) => state.mainSchedules);
@@ -57,8 +59,12 @@ const DetailSchedule = () => {
       ) : (
         <>
           {/* Main Schedule Title */}
-          <div className="flex w-full justify-end mb-3">
-            <FaEdit className="text-2xl text-[#463198] cursor-pointer hover:opacity-60 transition-all duration-150" />
+          <div className="flex w-full justify-between mb-3">
+            <SlideTitle title="📋상세 일정" />
+            <FaEdit
+              className="text-2xl text-[#463198] cursor-pointer hover:opacity-60 transition-all duration-150"
+              onClick={() => setSelectedIcon("editSchedule")}
+            />
           </div>
           {/* <div className="flex">
             <span className="block text-sm text-gray-600 mb-1">목표</span>

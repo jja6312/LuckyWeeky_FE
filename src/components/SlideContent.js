@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import useScheduleStore from "../stores/useScheduleStore";
 import DetailSchedule from "./DetailSchedule";
+import EditSchedule from "./EditSchedule";
 
 const SlideContent = ({ isSidebarOpen, selectedIcon }) => {
   const selectedSchedule = useScheduleStore((state) => state.selectedSchedule);
@@ -27,6 +28,10 @@ const SlideContent = ({ isSidebarOpen, selectedIcon }) => {
     },
   };
 
+  useEffect(() => {
+    console.log("선택된아이콘:", selectedIcon);
+  }, [selectedIcon]);
+
   const content = contentMap[selectedIcon];
 
   return (
@@ -36,11 +41,10 @@ const SlideContent = ({ isSidebarOpen, selectedIcon }) => {
       }`}
     >
       {content ? (
-        <>
-          {/* 상세 일정 컴포넌트 렌더링 */}
-          {selectedIcon === "detailSchedule" && <DetailSchedule />}
-        </>
+        <>{selectedIcon === "detailSchedule" && <DetailSchedule />}</>
       ) : null}
+
+      {selectedIcon === "editSchedule" && <EditSchedule />}
     </div>
   );
 };
