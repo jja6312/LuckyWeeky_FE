@@ -10,18 +10,18 @@ import {
 } from "date-fns";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import useStore from "../stores/useStore";
-import useScheduleStore from "../stores/scheduleStore";
+import useScheduleStore from "../stores/useScheduleStore";
 import ScheduleModal from "./ScheduleModal";
 import WeekHeader from "./WeekHeader";
 
 const Calendar = () => {
-  const currentWeek = useStore((state) => state.currentWeek);
-  const setPrevWeek = useStore((state) => state.setPrevWeek);
-  const setNextWeek = useStore((state) => state.setNextWeek);
-  const setWeek = useStore((state) => state.setWeek);
+  const { selectedSchedule, setSelectedSchedule } = useScheduleStore();
+  const { currentWeek, setPrevWeek, setNextWeek, setWeek } = useStore();
+
+  // 캘린더 일정 클릭시 사이드바 조작을 위한 상태
+  const { setSelectedIcon, setIsSidebarOpen } = useStore();
 
   const [hoverTime, setHoverTime] = useState({ hour: null, minutes: null });
-  const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalClosing, setModalClosing] = useState(false);
   const [modalPosition, setModalPosition] = useState({ top: 0, left: 0 });
@@ -52,6 +52,7 @@ const Calendar = () => {
   };
 
   const handleTimeBlockClick = (dayIndex, hour, quarter, event) => {
+    event.stopPropagation(); // 이벤트 전파 방지
     if (modalOpen) {
       closeModal();
       return;
@@ -66,8 +67,8 @@ const Calendar = () => {
     endTime.setMinutes(endTime.getMinutes() + 15);
 
     const newSchedule = {
-      mainSchedule: "기본일정",
-      title: `No title ${format(startTime, "h:mm a")} - ${format(
+      mainScheduleTitle: "기본일정",
+      subScheduleTitle: `No title ${format(startTime, "h:mm a")} - ${format(
         endTime,
         "h:mm a"
       )}`,
@@ -97,7 +98,7 @@ const Calendar = () => {
   // 현재 주에 해당하는 일정 필터링
   const filteredSubSchedules = useMemo(() => {
     return subschedules.filter((schedule) => {
-      const scheduleStart = new Date(schedule.start_time); // Date 변환 보장
+      const scheduleStart = new Date(schedule.start_time);
       const scheduleEnd = new Date(schedule.end_time);
 
       return (
@@ -113,20 +114,18 @@ const Calendar = () => {
   // 시간대를 나타내는 배열 생성 (0시부터 23시까지)
   const hours = [...Array(24)].map((_, i) => i);
 
-  // 일정 렌더링 함수
   const renderSchedules = () => {
     if (!filteredSubSchedules || filteredSubSchedules.length === 0) {
       return null; // 일정이 없으면 아무것도 렌더링하지 않음
     }
 
-    return filteredSubSchedules.map((schedule, index) => {
+    return filteredSubSchedules.flatMap((schedule, index) => {
       const scheduleStart = new Date(schedule.start_time);
       const scheduleEnd = new Date(schedule.end_time);
-      const scheduleColor = schedule.color || "#ddd"; // 기본 색상 설정
-      const scheduleTitle = schedule.title;
+      const scheduleColor = schedule.color || "#ddd";
+      const scheduleTitle = schedule.subScheduleTitle;
 
       const divs = [];
-
       let currentStart = new Date(scheduleStart);
 
       while (currentStart < scheduleEnd) {
@@ -135,7 +134,7 @@ const Calendar = () => {
             startOfDay(new Date(currentStart)).getTime() + 24 * 60 * 60 * 1000,
             scheduleEnd
           )
-        ); // 현재 날짜의 끝 또는 scheduleEnd 중 더 이른 시간
+        );
 
         const totalMinutesInDay = 24 * 60;
         const startOfDayTime = startOfDay(currentStart).getTime();
@@ -150,8 +149,8 @@ const Calendar = () => {
 
         divs.push(
           <div
-            key={`${index}-${currentStart}`}
-            className="absolute flex justify-center items-center cursor-pointer"
+            key={`${index}-${currentStart.toISOString()}`}
+            className="absolute flex justify-center items-center cursor-pointer hover:opacity-70 transition-all duration-150"
             style={{
               top: `${minutesFromTop}%`,
               height: `${scheduleHeight}%`,
@@ -163,6 +162,12 @@ const Calendar = () => {
               overflow: "hidden",
               padding: "2px",
               boxSizing: "border-box",
+            }}
+            onClick={(e) => {
+              e.stopPropagation(); // 이벤트 전파 방지
+              setIsSidebarOpen(true);
+              setSelectedIcon("detailSchedule");
+              setSelectedSchedule(schedule);
             }}
           >
             <div className="text-xs text-black text-center">
@@ -179,13 +184,7 @@ const Calendar = () => {
   };
 
   useEffect(() => {
-    const schedules =
-      JSON.parse(localStorage.getItem("schedule-storage")) || [];
-    console.log("로컬 스토리지에서 불러온 일정: ", schedules);
-
-    if (schedules.length > 0) {
-      useScheduleStore.getState().initializeSubSchedules(schedules); // 상태 초기화
-    }
+    // 필요에 따라 초기화 로직 추가
   }, []); // 첫 렌더링 시 한 번 실행
 
   // subschedules 상태가 변경되었을 때 실행
@@ -283,7 +282,7 @@ const Calendar = () => {
           {[...Array(7)].map((_, dayIndex) => (
             <div
               key={dayIndex}
-              className="absolute top-0"
+              className="absolute top-0 "
               style={{
                 left: `calc(${(dayIndex * 100) / 7}%)`,
                 width: `calc(100% / 7)`,

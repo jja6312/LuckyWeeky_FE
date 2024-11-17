@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+// useScheduleStore.js
 const useScheduleStore = create(
   persist(
     (set, get) => ({
@@ -9,21 +10,33 @@ const useScheduleStore = create(
         {
           main_schedule_id: 1,
           user_id: 101,
-          title: "목표 추가",
+          title: "도커 공부",
           start_time: new Date("2023-11-16T09:00:00"),
           end_time: new Date("2029-11-16T10:00:00"),
           color: "#FF5733",
           created_at: new Date("2023-11-01T12:00:00"),
           updated_at: new Date("2023-11-10T12:00:00"),
         },
-        // ... 다른 일정들
+        {
+          main_schedule_id: 2,
+          user_id: 101,
+          title: "스프링 공부",
+          start_time: new Date("2023-11-16T09:00:00"),
+          end_time: new Date("2029-11-16T10:00:00"),
+          color: "#FF5733",
+          created_at: new Date("2023-11-01T12:00:00"),
+          updated_at: new Date("2023-11-10T12:00:00"),
+        },
       ],
 
       currentDate: new Date(), // 현재 날짜
 
       // 선택된 일정
       selectedSchedule: null,
-      setSelectedSchedule: (schedule) => set({ selectedSchedule: schedule }),
+      setSelectedSchedule: (schedule) => {
+        console.log("Setting selected schedule:", schedule);
+        set({ selectedSchedule: schedule || null });
+      },
 
       // 서브 일정 관리
       subschedules: [],
@@ -31,7 +44,7 @@ const useScheduleStore = create(
       // 서브 일정 초기화
       initializeSubSchedules: (schedules) => {
         set(() => ({
-          subschedules: schedules, // 로컬 스토리지에서 가져온 데이터를 직접 설정
+          subschedules: schedules,
         }));
       },
 

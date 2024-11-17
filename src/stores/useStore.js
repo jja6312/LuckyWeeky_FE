@@ -17,6 +17,12 @@ const useStore = create((set) => ({
     })),
   closeSidebar: () => set({ isSidebarOpen: false, selectedIcon: null }), // 닫으면 선택 초기화
 
+  toggleSidebar: () =>
+    set((state) => ({
+      isSidebarOpen: !state.isSidebarOpen,
+      selectedIcon: !state.isSidebarOpen ? "addSchedule" : null,
+    })),
+
   currentWeek: new Date(),
   setPrevWeek: () =>
     set((state) => ({
