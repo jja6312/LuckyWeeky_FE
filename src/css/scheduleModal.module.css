@@ -40,8 +40,8 @@
   }
 }
 
-.cancelButton {
-  flex: 1;
+.cancleButton {
+  width: 30%;
   padding: 8px;
   background-color: #e5e5e5;
   border: none;
@@ -50,7 +50,7 @@
 }
 
 .saveButton {
-  flex: 1;
+  width: 70%;
   padding: 8px;
   background-color: #463198;
   color: white;
@@ -59,7 +59,7 @@
   cursor: pointer;
 }
 
-.cancelButton:hover {
+.cancleButton:hover {
   background-color: #d4d4d4;
 }
 

@@ -64,7 +64,7 @@ const SlideBar = () => {
 
         {/* Icon Section */}
         <div
-          className={`flex flex-col items-center py-4 w-16 bg-[#463198] text-white h-full relative transition-all duration-300 ${
+          className={`flex flex-col items-center py-2 w-16 bg-[#463198] text-white h-full relative transition-all duration-300 ${
             isSidebarOpen ? "ml-96" : ""
           }`}
           onClick={handleBarClick} // 빈 바 클릭 이벤트 추가
@@ -82,7 +82,7 @@ const SlideBar = () => {
           )}
 
           {/* Icons */}
-          <div className="flex flex-col items-center space-y-6 mt-2">
+          <div className="w-full flex flex-col items-center space-y-6 mt-2">
             {icons.map((item) => (
               <IconButton
                 key={item.name}

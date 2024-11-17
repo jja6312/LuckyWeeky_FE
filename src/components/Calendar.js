@@ -1,70 +1,18 @@
 // components/Calendar.jsx
-import React, { useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   format,
   startOfWeek,
-  addDays,
-  isToday,
   parseISO,
   differenceInMinutes,
   startOfDay,
   endOfWeek,
 } from "date-fns";
-import {
-  FaChevronLeft,
-  FaChevronRight,
-  FaCheckSquare,
-  FaRegSquare,
-} from "react-icons/fa";
+import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import useStore from "../stores/useStore";
 import useScheduleStore from "../stores/scheduleStore";
 import ScheduleModal from "./ScheduleModal";
-
-const WeekHeader = ({ startOfCurrentWeek }) => {
-  return (
-    <div
-      className="grid border-b sticky top-0 bg-white z-10"
-      style={{
-        gridTemplateColumns: "102.4px repeat(7, minmax(0, 1fr))",
-        boxSizing: "border-box",
-      }}
-    >
-      <div className="border-r h-16"></div>
-      {[...Array(7)].map((_, index) => {
-        const day = addDays(startOfCurrentWeek, index);
-        const isCurrentDay = isToday(day);
-
-        return (
-          <div
-            key={index}
-            className="border-r text-center h-16 flex items-center justify-center"
-          >
-            <div className="flex justify-center items-center">
-              <span
-                className={`text-sm ${
-                  isCurrentDay ? "font-bold text-black" : "text-gray-500"
-                }`}
-              >
-                {format(day, "EEE")}
-              </span>
-              <div
-                className={`flex items-center justify-center rounded-full w-6 h-6 ${
-                  isCurrentDay ? "ml-2 bg-blue-500 text-white font-bold" : ""
-                }`}
-              >
-                <span
-                  className={`text-sm ${isCurrentDay ? "" : "text-gray-500"}`}
-                >
-                  {format(day, "d")}
-                </span>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
+import WeekHeader from "./WeekHeader";
 
 const Calendar = () => {
   const currentWeek = useStore((state) => state.currentWeek);
@@ -72,19 +20,13 @@ const Calendar = () => {
   const setNextWeek = useStore((state) => state.setNextWeek);
   const setWeek = useStore((state) => state.setWeek);
 
+  const [hoverTime, setHoverTime] = useState({ hour: null, minutes: null });
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalClosing, setModalClosing] = useState(false);
   const [modalPosition, setModalPosition] = useState({ top: 0, left: 0 });
 
-  const mainSchedules = useScheduleStore((state) => state.mainSchedules);
   const subschedules = useScheduleStore((state) => state.subschedules);
-  const showPastSchedules = useScheduleStore(
-    (state) => state.showPastSchedules
-  );
-  const toggleShowPastSchedules = useScheduleStore(
-    (state) => state.toggleShowPastSchedules
-  );
 
   const startOfCurrentWeek = startOfWeek(currentWeek, { weekStartsOn: 1 });
   const endOfCurrentWeek = endOfWeek(currentWeek, { weekStartsOn: 1 });
@@ -106,12 +48,11 @@ const Calendar = () => {
       setModalOpen(false);
       setModalClosing(false);
       setSelectedSchedule(null);
-    }, 400); // Duration should match the CSS animation duration
+    }, 400);
   };
 
   const handleTimeBlockClick = (dayIndex, hour, quarter, event) => {
     if (modalOpen) {
-      // If modal is already open, close it without opening a new one
       closeModal();
       return;
     }
@@ -125,7 +66,7 @@ const Calendar = () => {
     endTime.setMinutes(endTime.getMinutes() + 15);
 
     const newSchedule = {
-      mainSchedule: "기본일정(default)", // default mainSchedule
+      mainSchedule: "기본일정",
       title: `No title ${format(startTime, "h:mm a")} - ${format(
         endTime,
         "h:mm a"
@@ -137,7 +78,6 @@ const Calendar = () => {
       status: "진행중",
     };
 
-    // 클릭한 시간 블록의 위치로 모달 위치 설정
     const rect = event.currentTarget.getBoundingClientRect();
     const offsetTop = rect.top + window.scrollY;
     const offsetLeft = rect.left + window.scrollX;
@@ -155,35 +95,33 @@ const Calendar = () => {
   };
 
   // 현재 주에 해당하는 일정 필터링
-  const filteredSubSchedules = subschedules.filter((schedule) => {
-    const scheduleStart = schedule.start_time;
-    const scheduleEnd = schedule.end_time;
+  const filteredSubSchedules = useMemo(() => {
+    return subschedules.filter((schedule) => {
+      const scheduleStart = new Date(schedule.start_time); // Date 변환 보장
+      const scheduleEnd = new Date(schedule.end_time);
 
-    // 일정이 현재 주와 겹치는지 확인
-    const isOverlapping =
-      (scheduleStart >= startOfCurrentWeek &&
-        scheduleStart <= endOfCurrentWeek) ||
-      (scheduleEnd >= startOfCurrentWeek && scheduleEnd <= endOfCurrentWeek) ||
-      (scheduleStart <= startOfCurrentWeek && scheduleEnd >= endOfCurrentWeek);
-
-    if (!isOverlapping) return false;
-
-    // "지난 일정 포함" 옵션 처리
-    if (showPastSchedules) {
-      return true;
-    } else {
-      return schedule.end_time >= new Date(startOfDay(new Date()));
-    }
-  });
+      return (
+        (scheduleStart >= startOfCurrentWeek &&
+          scheduleStart <= endOfCurrentWeek) ||
+        (scheduleEnd >= startOfCurrentWeek &&
+          scheduleEnd <= endOfCurrentWeek) ||
+        (scheduleStart <= startOfCurrentWeek && scheduleEnd >= endOfCurrentWeek)
+      );
+    });
+  }, [subschedules, startOfCurrentWeek, endOfCurrentWeek]);
 
   // 시간대를 나타내는 배열 생성 (0시부터 23시까지)
   const hours = [...Array(24)].map((_, i) => i);
 
   // 일정 렌더링 함수
   const renderSchedules = () => {
+    if (!filteredSubSchedules || filteredSubSchedules.length === 0) {
+      return null; // 일정이 없으면 아무것도 렌더링하지 않음
+    }
+
     return filteredSubSchedules.map((schedule, index) => {
-      const scheduleStart = schedule.start_time;
-      const scheduleEnd = schedule.end_time;
+      const scheduleStart = new Date(schedule.start_time);
+      const scheduleEnd = new Date(schedule.end_time);
 
       // 하루 총 분
       const totalMinutesInDay = 24 * 60;
@@ -201,7 +139,7 @@ const Calendar = () => {
 
       // 일정이 시작되는 요일 계산 (0부터 6까지)
       const dayIndex =
-        scheduleStart.getDay() === 0 ? 6 : scheduleStart.getDay() - 1; // 일요일 기준을 마지막으로 변경
+        scheduleStart.getDay() === 0 ? 6 : scheduleStart.getDay() - 1;
 
       return (
         <div
@@ -211,10 +149,10 @@ const Calendar = () => {
             top: `${minutesFromTop}%`,
             height: `${scheduleHeight}%`,
             left: `calc(${dayIndex * (100 / 7)}%)`,
-            width: `calc(${100 / 7}% - 1px)`,
-            backgroundColor: schedule.color,
+            width: `calc(${100 / 7}%)`,
+            backgroundColor: schedule.color || "#ddd", // 기본 색상 설정
             zIndex: 5,
-            borderRadius: "0px", // 네모 모양
+            borderRadius: "4px",
             overflow: "hidden",
             padding: "2px",
             boxSizing: "border-box",
@@ -225,6 +163,24 @@ const Calendar = () => {
       );
     });
   };
+
+  useEffect(() => {
+    const schedules =
+      JSON.parse(localStorage.getItem("schedule-storage")) || [];
+    console.log("로컬 스토리지에서 불러온 일정: ", schedules);
+
+    if (schedules.length > 0) {
+      useScheduleStore.getState().initializeSubSchedules(schedules); // 상태 초기화
+    }
+  }, []); // 첫 렌더링 시 한 번 실행
+
+  // subschedules 상태가 변경되었을 때 실행
+  useEffect(() => {
+    console.log("현재 subschedules: ", subschedules);
+    if (subschedules.length > 0) {
+      console.log("일정 불러오기 완료");
+    }
+  }, [subschedules]); // subschedules가 변경될 때 실행
 
   return (
     <div
@@ -260,26 +216,6 @@ const Calendar = () => {
           >
             <FaChevronRight />
           </button>
-          {/* "지난 일정 포함" 체크박스 */}
-          <label className="flex items-center space-x-1 cursor-pointer ml-4">
-            {showPastSchedules ? (
-              <FaCheckSquare
-                className="text-blue-600"
-                onClick={toggleShowPastSchedules}
-              />
-            ) : (
-              <FaRegSquare
-                className="text-gray-400"
-                onClick={toggleShowPastSchedules}
-              />
-            )}
-            <span
-              className="text-sm text-gray-700"
-              onClick={toggleShowPastSchedules}
-            >
-              지난 일정 포함
-            </span>
-          </label>
         </div>
       </div>
 
@@ -326,7 +262,6 @@ const Calendar = () => {
           ))}
         </div>
 
-        {/* 날짜별 시간대 표시 */}
         <div
           className="absolute left-[102.4px] top-0"
           style={{ width: "calc(100% - 102.4px)", height: "100%" }}
@@ -339,56 +274,75 @@ const Calendar = () => {
                 left: `calc(${(dayIndex * 100) / 7}%)`,
                 width: `calc(100% / 7)`,
                 height: "100%",
-                borderRight: "1px solid #e5e7eb",
                 boxSizing: "border-box",
+                borderRight: "1px solid #e5e7eb",
               }}
             >
-              {/* 각 시간대의 배경 그리드 */}
               {hours.map((hour) => (
                 <div
                   key={hour}
                   style={{
                     height: `${(1 / 24) * 100}%`,
-                    borderBottom: "1px solid #e5e7eb",
                     boxSizing: "border-box",
+                    borderTop: "1px solid #e5e7eb",
+                    borderBottom: "1px solid #e5e7eb",
                   }}
                 >
-                  <div
-                    className="h-full w-full group"
-                    onClick={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const y = e.clientY - rect.top;
-                      const clickedMinutes = (y / rect.height) * 60;
-                      const clickedHour = hour;
-                      const clickedDate = new Date(startOfCurrentWeek);
-                      clickedDate.setDate(clickedDate.getDate() + dayIndex);
-                      clickedDate.setHours(
-                        clickedHour,
-                        Math.floor(clickedMinutes),
-                        0,
-                        0
-                      );
-
-                      handleTimeBlockClick(
-                        dayIndex,
-                        clickedHour,
-                        Math.floor(clickedMinutes / 15),
-                        e
-                      );
-                    }}
-                    style={{
-                      position: "relative",
-                      height: "100%",
-                    }}
-                  >
-                    {/* Hover 효과 복원 */}
+                  {[0, 1, 2, 3].map((quarter) => (
                     <div
-                      className="absolute inset-0 group-hover:bg-blue-100"
-                      style={{
-                        borderRadius: "0px",
+                      key={quarter}
+                      className="h-full w-full group relative"
+                      onMouseEnter={() => {
+                        setHoverTime({
+                          hour,
+                          minutes: quarter * 15,
+                          dayIndex,
+                        });
                       }}
-                    ></div>
-                  </div>
+                      onMouseLeave={() => {
+                        setHoverTime({ hour: null, minutes: null });
+                      }}
+                      onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const clickedMinutes = quarter * 15; // 현재 블록의 시작 분(15분 단위)
+                        const clickedHour = hour;
+                        const clickedDate = new Date(startOfCurrentWeek);
+                        clickedDate.setDate(clickedDate.getDate() + dayIndex);
+                        clickedDate.setHours(clickedHour, clickedMinutes, 0, 0);
+
+                        handleTimeBlockClick(dayIndex, clickedHour, quarter, e);
+                      }}
+                      style={{
+                        position: "relative",
+                        height: `${(1 / 4) * 100}%`, // 15분 단위 높이
+                        borderTop:
+                          quarter === 0 ? "none" : "1px dotted transparent",
+                        borderBottom:
+                          quarter === 3 ? "none" : "1px dotted transparent",
+                      }}
+                    >
+                      <div
+                        className="absolute inset-0 group-hover:bg-[#f6f4ff]"
+                        style={{
+                          borderRadius: "0px",
+                        }}
+                      ></div>
+                      {hoverTime.hour === hour &&
+                        hoverTime.minutes === quarter * 15 &&
+                        hoverTime.dayIndex === dayIndex && (
+                          <div
+                            className="absolute inset-0 flex items-center justify-center text-xs text-gray-400"
+                            style={{
+                              pointerEvents: "none",
+                            }}
+                          >
+                            {`${
+                              hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
+                            }${hour >= 12 ? "pm" : "am"} ${quarter * 15}min`}
+                          </div>
+                        )}
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
@@ -398,7 +352,6 @@ const Calendar = () => {
           {renderSchedules()}
         </div>
       </div>
-
       {/* 모달 컴포넌트 */}
       {modalOpen && (
         <ScheduleModal
