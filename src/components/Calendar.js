@@ -8,15 +8,17 @@ import {
   startOfDay,
   endOfWeek,
 } from "date-fns";
-import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FaChevronLeft, FaChevronRight, FaEdit, FaTrash } from "react-icons/fa";
 import useStore from "../stores/useStore";
 import useScheduleStore from "../stores/useScheduleStore";
 import ScheduleModal from "./ScheduleModal";
 import WeekHeader from "./WeekHeader";
+import Swal from "sweetalert2";
 
 const Calendar = () => {
   const { selectedSchedule, setSelectedSchedule } = useScheduleStore();
-  const { currentWeek, setPrevWeek, setNextWeek, setWeek } = useStore();
+  const { currentWeek, setPrevWeek, setNextWeek, setWeek, closeSidebar } =
+    useStore();
 
   // 캘린더 일정 클릭시 사이드바 조작을 위한 상태
   const { setSelectedIcon, setIsSidebarOpen } = useStore();
@@ -95,6 +97,52 @@ const Calendar = () => {
     closeModal();
   };
 
+  const handleDelete = () => {
+    Swal.fire({
+      title: "<strong style='font-size:18px'>정말 삭제하시겠습니까?</strong>",
+      html: "<p style='font-size:12px;color:#555'>삭제된 데이터는 복구할 수 없습니다.</p>",
+      icon: "warning",
+      iconColor: "#d33",
+      position: "top",
+      showCancelButton: true,
+      cancelButtonText: "<b style='margin-left:2px;'>취소</b>",
+      confirmButtonText: "<b style='margin-right:2px;'>삭제</b>",
+      reverseButtons: true, // 버튼 위치 변경
+      buttonsStyling: false,
+      customClass: {
+        popup: "bg-white rounded-lg shadow-lg p-4", // 높이를 줄이기 위한 padding 조정
+        title: "text-red-500 font-bold",
+        confirmButton:
+          "bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600 transition duration-150 ml-4", // 삭제 버튼 간격 추가
+        cancelButton:
+          "bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 transition duration-150", // 취소 버튼
+      },
+    }).then((result) => {
+      if (result.isConfirmed) {
+        Swal.fire({
+          title: "✨ 삭제 완료! ✨",
+          text: "데이터가 성공적으로 삭제되었습니다.",
+          icon: "success",
+          iconColor: "#4caf50",
+          position: "top",
+          timer: 1000,
+          timerProgressBar: true,
+          showConfirmButton: false,
+
+          background: "linear-gradient(145deg, #f0f0f0, #e0e0e0)",
+          customClass: {
+            popup: "rounded-lg shadow-md",
+            title: "text-green-600 font-bold",
+          },
+        });
+        closeSidebar();
+        console.log("삭제가 완료되었습니다.");
+      } else {
+        console.log("삭제가 취소되었습니다.");
+      }
+    });
+  };
+
   // 현재 주에 해당하는 일정 필터링
   const filteredSubSchedules = useMemo(() => {
     return subschedules.filter((schedule) => {
@@ -150,7 +198,8 @@ const Calendar = () => {
         divs.push(
           <div
             key={`${index}-${currentStart.toISOString()}`}
-            className="absolute flex justify-center items-center cursor-pointer hover:opacity-70 transition-all duration-150"
+            className="absolute flex flex-col cursor-pointer hover:opacity-70 transition-all duration-150
+            group"
             style={{
               top: `${minutesFromTop}%`,
               height: `${scheduleHeight}%`,
@@ -170,8 +219,28 @@ const Calendar = () => {
               setSelectedSchedule(schedule);
             }}
           >
-            <div className="text-xs text-black text-center">
-              {scheduleTitle}
+            <div
+              className=" space-x-1 absolute right-1 
+            hidden group-hover:flex"
+            >
+              <FaEdit
+                className="text-xs text-gray-400 hover:text-[#312a7a]"
+                onClick={(e) => {
+                  e.stopPropagation(); // 이벤트 전파 방지
+                  setSelectedIcon("editSchedule");
+                  setSelectedSchedule(schedule);
+                }}
+              />
+              <FaTrash
+                className="text-xs text-gray-400 hover:text-[#312a7a]"
+                onClick={(e) => {
+                  e.stopPropagation(); // 이벤트 전파 방지
+                  handleDelete();
+                }}
+              />
+            </div>
+            <div className="flex justify-center items-center text-xs text-black text-center">
+              <span>{scheduleTitle}</span>
             </div>
           </div>
         );
@@ -324,6 +393,7 @@ const Calendar = () => {
                         clickedDate.setHours(clickedHour, clickedMinutes, 0, 0);
 
                         handleTimeBlockClick(dayIndex, clickedHour, quarter, e);
+                        closeSidebar();
                       }}
                       style={{
                         position: "relative",
