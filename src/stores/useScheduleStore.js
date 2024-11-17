@@ -5,6 +5,16 @@ import { persist } from "zustand/middleware";
 const useScheduleStore = create(
   persist(
     (set, get) => ({
+      predefinedColors: [
+        "#FF5733",
+        "#33FF57",
+        "#3357FF",
+        "#FF33A8",
+        "#FF8C33",
+        "#8D33FF",
+        "#33FFF5",
+        "#FF3333",
+      ],
       // 메인 일정
       mainSchedules: [
         {
