@@ -20,6 +20,7 @@ const Calendar = () => {
   const setNextWeek = useStore((state) => state.setNextWeek);
   const setWeek = useStore((state) => state.setWeek);
 
+  const [hoverTime, setHoverTime] = useState({ hour: null, minutes: null });
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalClosing, setModalClosing] = useState(false);
@@ -148,7 +149,7 @@ const Calendar = () => {
             top: `${minutesFromTop}%`,
             height: `${scheduleHeight}%`,
             left: `calc(${dayIndex * (100 / 7)}%)`,
-            width: `calc(${100 / 7}% - 1px)`,
+            width: `calc(${100 / 7}%)`,
             backgroundColor: schedule.color || "#ddd", // 기본 색상 설정
             zIndex: 5,
             borderRadius: "4px",
@@ -261,7 +262,6 @@ const Calendar = () => {
           ))}
         </div>
 
-        {/* 날짜별 시간대 표시 */}
         <div
           className="absolute left-[102.4px] top-0"
           style={{ width: "calc(100% - 102.4px)", height: "100%" }}
@@ -274,8 +274,8 @@ const Calendar = () => {
                 left: `calc(${(dayIndex * 100) / 7}%)`,
                 width: `calc(100% / 7)`,
                 height: "100%",
-                borderRight: "1px solid #e5e7eb",
                 boxSizing: "border-box",
+                borderRight: "1px solid #e5e7eb",
               }}
             >
               {hours.map((hour) => (
@@ -283,45 +283,66 @@ const Calendar = () => {
                   key={hour}
                   style={{
                     height: `${(1 / 24) * 100}%`,
-                    borderBottom: "1px solid #e5e7eb",
                     boxSizing: "border-box",
+                    borderTop: "1px solid #e5e7eb",
+                    borderBottom: "1px solid #e5e7eb",
                   }}
                 >
-                  <div
-                    className="h-full w-full group"
-                    onClick={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const y = e.clientY - rect.top;
-                      const clickedMinutes = (y / rect.height) * 60;
-                      const clickedHour = hour;
-                      const clickedDate = new Date(startOfCurrentWeek);
-                      clickedDate.setDate(clickedDate.getDate() + dayIndex);
-                      clickedDate.setHours(
-                        clickedHour,
-                        Math.floor(clickedMinutes),
-                        0,
-                        0
-                      );
-
-                      handleTimeBlockClick(
-                        dayIndex,
-                        clickedHour,
-                        Math.floor(clickedMinutes / 15),
-                        e
-                      );
-                    }}
-                    style={{
-                      position: "relative",
-                      height: "100%",
-                    }}
-                  >
+                  {[0, 1, 2, 3].map((quarter) => (
                     <div
-                      className="absolute inset-0 group-hover:bg-blue-100"
-                      style={{
-                        borderRadius: "0px",
+                      key={quarter}
+                      className="h-full w-full group relative"
+                      onMouseEnter={() => {
+                        setHoverTime({
+                          hour,
+                          minutes: quarter * 15,
+                          dayIndex,
+                        });
                       }}
-                    ></div>
-                  </div>
+                      onMouseLeave={() => {
+                        setHoverTime({ hour: null, minutes: null });
+                      }}
+                      onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const clickedMinutes = quarter * 15; // 현재 블록의 시작 분(15분 단위)
+                        const clickedHour = hour;
+                        const clickedDate = new Date(startOfCurrentWeek);
+                        clickedDate.setDate(clickedDate.getDate() + dayIndex);
+                        clickedDate.setHours(clickedHour, clickedMinutes, 0, 0);
+
+                        handleTimeBlockClick(dayIndex, clickedHour, quarter, e);
+                      }}
+                      style={{
+                        position: "relative",
+                        height: `${(1 / 4) * 100}%`, // 15분 단위 높이
+                        borderTop:
+                          quarter === 0 ? "none" : "1px dotted transparent",
+                        borderBottom:
+                          quarter === 3 ? "none" : "1px dotted transparent",
+                      }}
+                    >
+                      <div
+                        className="absolute inset-0 group-hover:bg-[#f6f4ff]"
+                        style={{
+                          borderRadius: "0px",
+                        }}
+                      ></div>
+                      {hoverTime.hour === hour &&
+                        hoverTime.minutes === quarter * 15 &&
+                        hoverTime.dayIndex === dayIndex && (
+                          <div
+                            className="absolute inset-0 flex items-center justify-center text-xs text-gray-400"
+                            style={{
+                              pointerEvents: "none",
+                            }}
+                          >
+                            {`${
+                              hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
+                            }${hour >= 12 ? "pm" : "am"} ${quarter * 15}min`}
+                          </div>
+                        )}
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
@@ -331,7 +352,6 @@ const Calendar = () => {
           {renderSchedules()}
         </div>
       </div>
-
       {/* 모달 컴포넌트 */}
       {modalOpen && (
         <ScheduleModal
