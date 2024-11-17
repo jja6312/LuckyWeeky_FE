@@ -148,7 +148,7 @@ const DetailSchedule = () => {
             <textarea
               readOnly
               className="w-full p-2 border border-gray-300 rounded focus:outline-none bg-gray-100 resize-none text-gray-800"
-              rows={12}
+              rows={6}
               value={selectedSchedule.description || "설명이 없습니다."}
             />
           </div>

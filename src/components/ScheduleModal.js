@@ -9,17 +9,6 @@ import {
   FaPlusCircle,
 } from "react-icons/fa";
 
-const predefinedColors = [
-  "#FF5733",
-  "#33FF57",
-  "#3357FF",
-  "#FF33A8",
-  "#FF8C33",
-  "#8D33FF",
-  "#33FFF5",
-  "#FF3333",
-];
-
 const ScheduleModal = ({ schedule, position, onClose, isClosing }) => {
   const {
     mainSchedules,
@@ -27,6 +16,7 @@ const ScheduleModal = ({ schedule, position, onClose, isClosing }) => {
     saveSubSchedule,
     setSelectedSchedule,
     addMainSchedule,
+    predefinedColors,
   } = useScheduleStore();
 
   // 상태를 객체로 묶기
@@ -247,7 +237,7 @@ const ScheduleModal = ({ schedule, position, onClose, isClosing }) => {
             ></div>
             {modalState.colorPickerVisible && (
               <div className="flex flex-wrap w-40 p-2 bg-white border-[2px] border-gray-300 rounded shadow-lg absolute z-20 top-10 left-0">
-                {predefinedColors.map((c) => (
+                {predefinedColors?.map((c) => (
                   <div
                     key={c}
                     className="w-6 h-6 m-1 rounded-full cursor-pointer"
