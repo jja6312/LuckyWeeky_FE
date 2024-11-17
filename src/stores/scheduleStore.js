@@ -10,9 +10,9 @@ const useScheduleStore = create(
         {
           main_schedule_id: 1,
           user_id: 101,
-          title: "직접 입력",
+          title: "목표 추가",
           start_time: new Date("2023-11-16T09:00:00"),
-          end_time: new Date("2023-11-16T10:00:00"),
+          end_time: new Date("2029-11-16T10:00:00"),
           color: "#FF5733",
           created_at: new Date("2023-11-01T12:00:00"),
           updated_at: new Date("2023-11-10T12:00:00"),
@@ -20,9 +20,9 @@ const useScheduleStore = create(
         {
           main_schedule_id: 2,
           user_id: 102,
-          title: "기본일정(default)",
+          title: "기본일정",
           start_time: new Date("2023-11-17T14:00:00"),
-          end_time: new Date("2023-11-17T15:00:00"),
+          end_time: new Date("2029-11-17T15:00:00"),
           color: "#33FF57",
           created_at: new Date("2023-11-05T10:00:00"),
           updated_at: new Date("2023-11-10T14:00:00"),
@@ -32,7 +32,7 @@ const useScheduleStore = create(
           user_id: 101,
           title: "도커공부",
           start_time: new Date("2023-11-18T16:00:00"),
-          end_time: new Date("2023-11-18T17:00:00"),
+          end_time: new Date("2026-11-18T17:00:00"),
           color: "#3357FF",
           created_at: new Date("2023-11-06T14:00:00"),
           updated_at: new Date("2023-11-12T16:00:00"),
@@ -98,15 +98,15 @@ const useScheduleStore = create(
       getStorage: () => localStorage, // specify storage
       serialize: (state) =>
         JSON.stringify(state, (key, value) => {
-          // Serialize Date objects as ISO strings
           if (value instanceof Date) {
+            // Date 객체를 ISO 문자열로 변환
             return value.toISOString();
           }
           return value;
         }),
+
       deserialize: (str) =>
         JSON.parse(str, (key, value) => {
-          // Deserialize ISO strings back to Date objects for specific keys
           const dateKeys = [
             "start_time",
             "end_time",
@@ -114,6 +114,7 @@ const useScheduleStore = create(
             "updated_at",
           ];
           if (dateKeys.includes(key) && typeof value === "string") {
+            // 특정 키의 ISO 문자열을 Date 객체로 변환
             return new Date(value);
           }
           return value;
