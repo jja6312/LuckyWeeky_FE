@@ -252,7 +252,13 @@ const ScheduleModal = ({ schedule, position, onClose, isClosing }) => {
                     key={c}
                     className="w-6 h-6 m-1 rounded-full cursor-pointer"
                     style={{ backgroundColor: c }}
-                    onClick={() => updateModalState("color", c)}
+                    onClick={() => {
+                      updateModalState("color", c);
+                      updateModalState(
+                        "colorPickerVisible",
+                        !modalState.colorPickerVisible
+                      );
+                    }}
                   ></div>
                 ))}
               </div>
