@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import useScheduleStore from "../stores/scheduleStore";
+import useScheduleStore from "../stores/useScheduleStore";
 import styles from "../css/scheduleModal.module.css";
 import { format, parse, addMinutes, subMinutes } from "date-fns";
 import {
@@ -21,70 +21,114 @@ const predefinedColors = [
 ];
 
 const ScheduleModal = ({ schedule, position, onClose, isClosing }) => {
-  const mainSchedules = useScheduleStore((state) => state.mainSchedules);
-  const saveSubSchedule = useScheduleStore((state) => state.saveSubSchedule);
-  const setSelectedSchedule = useScheduleStore(
-    (state) => state.setSelectedSchedule
-  );
+  const {
+    mainSchedules,
+    subschedules,
+    saveSubSchedule,
+    setSelectedSchedule,
+    addMainSchedule,
+  } = useScheduleStore();
 
-  const [mainSchedule, setMainSchedule] = useState("기본일정");
-  const [customInput, setCustomInput] = useState("");
-  const [subScheduleTitle, setSubScheduleTitle] = useState("");
-  const [startTime, setStartTime] = useState(schedule.start_time);
-  const [endTime, setEndTime] = useState(schedule.end_time);
-  const [description, setDescription] = useState("");
-  const [color, setColor] = useState(schedule.color || "#FF5733");
-  const [colorPickerVisible, setColorPickerVisible] = useState(false);
+  // 상태를 객체로 묶기
+  const [modalState, setModalState] = useState({
+    mainScheduleTitle: "기본일정",
+    customInput: "",
+    subScheduleTitle: "",
+    startTime: schedule?.start_time || new Date(),
+    endTime: schedule?.end_time || addMinutes(new Date(), 30),
+    color: schedule?.color || "#FF5733",
+    description: "",
+    colorPickerVisible: false,
+    showPastSchedules: false,
+  });
 
-  const [showPastSchedules, setShowPastSchedules] = useState(false);
-
-  const toggleShowPastSchedules = () => {
-    setShowPastSchedules(!showPastSchedules);
+  // 상태 업데이트 함수
+  const updateModalState = (key, value) => {
+    setModalState((prev) => ({ ...prev, [key]: value }));
   };
+
+  // 상태 자동 설정: 진행 상태 (진행중 / 지난 일정)
+  const status = modalState.endTime < new Date() ? "지난 일정" : "진행중";
 
   const modalRef = useRef(null);
 
   // 15분 단위로 조정
   const incrementDuration = () => {
-    setEndTime(addMinutes(endTime, 15));
+    updateModalState("endTime", addMinutes(modalState.endTime, 15));
   };
 
   const decrementDuration = () => {
-    if (endTime > addMinutes(startTime, 15)) {
-      setEndTime(subMinutes(endTime, 15));
+    if (modalState.endTime > addMinutes(modalState.startTime, 15)) {
+      updateModalState("endTime", subMinutes(modalState.endTime, 15));
     }
   };
 
   useEffect(() => {
-    if (mainSchedule === "목표 추가") {
+    if (modalState.mainScheduleTitle === "목표 추가") {
       document
         .querySelector("input[placeholder='목표를 입력하세요.']")
         ?.focus();
     }
-  }, [mainSchedule]);
+  }, [modalState.mainScheduleTitle]);
 
-  // 상태 자동 설정
-  const [status, setStatus] = useState("진행중");
+  // 필터링된 메인 일정
+  const filteredMainSchedules = mainSchedules.filter((mainSchedule) => {
+    const relatedSubSchedules = subschedules.filter(
+      (sub) => sub.mainScheduleTitle === mainSchedule.title
+    );
 
-  useEffect(() => {
-    const today = new Date();
-    if (endTime < today) {
-      setStatus("지난 일정");
-    } else {
-      setStatus("진행중");
+    // 진행 중인지 여부 판단
+    const isInProgress = relatedSubSchedules.some(
+      (sub) => sub.end_time >= new Date()
+    );
+
+    if (modalState.showPastSchedules) {
+      return true; // 모든 일정 표시
     }
-  }, [endTime]);
+
+    return isInProgress; // 진행 중인 일정만 표시
+  });
 
   const handleSave = () => {
+    const isCustomInput = modalState.mainScheduleTitle === "목표 추가";
     const scheduleToSave = {
-      mainSchedule: mainSchedule === "목표 추가" ? customInput : mainSchedule,
-      title: subScheduleTitle,
-      start_time: startTime,
-      end_time: endTime,
-      description,
-      color,
+      mainScheduleTitle:
+        modalState.mainScheduleTitle === "목표 추가" && modalState.customInput
+          ? modalState.customInput
+          : modalState.mainScheduleTitle,
+      subScheduleTitle: modalState.subScheduleTitle,
+      start_time: modalState.startTime,
+      end_time: modalState.endTime,
+      description: modalState.description,
+      color: modalState.color,
       status,
     };
+
+    if (isCustomInput) {
+      // {
+      //   main_schedule_id: 1,
+      //   user_id: 101,
+      //   title: "도커 공부",
+      //   start_time: new Date("2023-11-16T09:00:00"),
+      //   end_time: new Date("2029-11-16T10:00:00"),
+      //   color: "#FF5733",
+      //   created_at: new Date("2023-11-01T12:00:00"),
+      //   updated_at: new Date("2023-11-10T12:00:00"),
+      // }
+      const newMainSchedule = {
+        main_schedule_id: mainSchedules.length + 1,
+
+        user_id: 101,
+        title: modalState.customInput,
+        start_time: modalState.startTime,
+        end_time: modalState.endTime,
+        color: modalState.color,
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+
+      addMainSchedule(newMainSchedule);
+    }
 
     saveSubSchedule(scheduleToSave);
     setSelectedSchedule(scheduleToSave);
@@ -103,32 +147,6 @@ const ScheduleModal = ({ schedule, position, onClose, isClosing }) => {
     return parse(value, "yyyy-MM-dd'T'HH:mm", new Date());
   };
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (modalRef.current && !modalRef.current.contains(event.target)) {
-        // 모달 외부 클릭 시 닫히지 않음
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [onClose]);
-
-  const filteredMainSchedules = mainSchedules.filter((schedule) => {
-    // "목표 추가" 및 "기본일정" 일정은 항상 표시
-    if (schedule.title === "목표 추가" || schedule.title === "기본일정") {
-      return true;
-    }
-
-    // "지난 목표 보기" 옵션 상태에 따라 조건 분기
-    if (showPastSchedules) {
-      return true; // 옵션 활성화 시 모든 일정 표시
-    } else {
-      return schedule.end_time >= new Date(); // 옵션 비활성화 시 미래 일정만 표시
-    }
-  });
-
   return (
     <div className="fixed top-0 left-0 w-full h-full flex justify-center items-center z-50">
       <div
@@ -142,52 +160,65 @@ const ScheduleModal = ({ schedule, position, onClose, isClosing }) => {
         <div className="flex justify-between items-center space-x-2">
           <select
             className="w-2/3 p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#312a7a]"
-            value={mainSchedule}
-            onChange={(e) => setMainSchedule(e.target.value)}
+            value={modalState.mainScheduleTitle}
+            onChange={(e) =>
+              updateModalState("mainScheduleTitle", e.target.value)
+            }
           >
+            <option value="목표 추가" className="text-[#312a7a] font-semibold">
+              목표 추가
+            </option>
+            <option value="기본일정">기본일정</option>
             {filteredMainSchedules.map((sched) => (
-              <option
-                className={`${
-                  sched.title === "목표 추가"
-                    ? "text-[#312a7a] font-semibold"
-                    : ""
-                }`}
-                key={sched.main_schedule_id}
-                value={sched.title}
-              >
+              <option key={sched.main_schedule_id} value={sched.title}>
                 {sched.title}
               </option>
             ))}
           </select>
           {/* "지난 목표 보기" 체크박스 */}
           <label className="flex items-center space-x-1 cursor-pointer">
-            {showPastSchedules ? (
+            {modalState.showPastSchedules ? (
               <FaCheckSquare
                 className="text-[#312a7a] cursor-pointer"
-                onClick={toggleShowPastSchedules}
+                onClick={() =>
+                  updateModalState(
+                    "showPastSchedules",
+                    !modalState.showPastSchedules
+                  )
+                }
               />
             ) : (
               <FaRegSquare
                 className="text-gray-400"
-                onClick={toggleShowPastSchedules}
+                onClick={() =>
+                  updateModalState(
+                    "showPastSchedules",
+                    !modalState.showPastSchedules
+                  )
+                }
               />
             )}
             <span
               className="text-sm text-gray-700"
-              onClick={toggleShowPastSchedules}
+              onClick={() =>
+                updateModalState(
+                  "showPastSchedules",
+                  !modalState.showPastSchedules
+                )
+              }
             >
               지난 목표 보기
             </span>
           </label>
         </div>
 
-        {mainSchedule === "목표 추가" && (
+        {modalState.mainScheduleTitle === "목표 추가" && (
           <input
             type="text"
             placeholder="목표를 입력하세요."
             className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#312a7a] mt-2"
-            value={customInput}
-            onChange={(e) => setCustomInput(e.target.value)}
+            value={modalState.customInput}
+            onChange={(e) => updateModalState("customInput", e.target.value)}
           />
         )}
 
@@ -197,27 +228,31 @@ const ScheduleModal = ({ schedule, position, onClose, isClosing }) => {
             type="text"
             placeholder="일정을 입력하세요."
             className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#312a7a]"
-            value={subScheduleTitle}
-            onChange={(e) => setSubScheduleTitle(e.target.value)}
+            value={modalState.subScheduleTitle}
+            onChange={(e) =>
+              updateModalState("subScheduleTitle", e.target.value)
+            }
           />
           {/* 색상 선택 */}
           <div className="flex items-center space-x-2 relative">
             <div
               className="w-8 h-8 rounded-full cursor-pointer border-[2px] border-gray-200"
-              style={{ backgroundColor: color }}
-              onClick={() => setColorPickerVisible(!colorPickerVisible)}
+              style={{ backgroundColor: modalState.color }}
+              onClick={() =>
+                updateModalState(
+                  "colorPickerVisible",
+                  !modalState.colorPickerVisible
+                )
+              }
             ></div>
-            {colorPickerVisible && (
+            {modalState.colorPickerVisible && (
               <div className="flex flex-wrap w-40 p-2 bg-white border-[2px] border-gray-300 rounded shadow-lg absolute z-20 top-10 left-0">
                 {predefinedColors.map((c) => (
                   <div
                     key={c}
-                    className="w-6 h-6 m-1 rounded-full cursor-pointer "
+                    className="w-6 h-6 m-1 rounded-full cursor-pointer"
                     style={{ backgroundColor: c }}
-                    onClick={() => {
-                      setColor(c);
-                      setColorPickerVisible(false);
-                    }}
+                    onClick={() => updateModalState("color", c)}
                   ></div>
                 ))}
               </div>
@@ -234,7 +269,10 @@ const ScheduleModal = ({ schedule, position, onClose, isClosing }) => {
               onClick={decrementDuration}
             />
             <span className="text-gray-700 text-sm">
-              {Math.round((endTime - startTime) / (1000 * 60))} mins
+              {Math.round(
+                (modalState.endTime - modalState.startTime) / (1000 * 60)
+              )}{" "}
+              mins
             </span>
             <FaPlusCircle
               className="text-[#312a7a] text-3xl cursor-pointer"
@@ -250,8 +288,13 @@ const ScheduleModal = ({ schedule, position, onClose, isClosing }) => {
             <input
               type="datetime-local"
               className="w-full p-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#312a7a] text-xs"
-              value={formatLocalDateTime(startTime)}
-              onChange={(e) => setStartTime(parseLocalDateTime(e.target.value))}
+              value={formatLocalDateTime(modalState.startTime)}
+              onChange={(e) =>
+                updateModalState(
+                  "startTime",
+                  parseLocalDateTime(e.target.value)
+                )
+              }
             />
           </div>
           <div className="flex flex-col items-start flex-1">
@@ -259,8 +302,10 @@ const ScheduleModal = ({ schedule, position, onClose, isClosing }) => {
             <input
               type="datetime-local"
               className="w-full p-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#312a7a] text-xs"
-              value={formatLocalDateTime(endTime)}
-              onChange={(e) => setEndTime(parseLocalDateTime(e.target.value))}
+              value={formatLocalDateTime(modalState.endTime)}
+              onChange={(e) =>
+                updateModalState("endTime", parseLocalDateTime(e.target.value))
+              }
             />
           </div>
         </div>
@@ -269,8 +314,8 @@ const ScheduleModal = ({ schedule, position, onClose, isClosing }) => {
         <textarea
           placeholder="추가 설명 입력 (옵션)"
           className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#312a7a] mt-4"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          value={modalState.description}
+          onChange={(e) => updateModalState("description", e.target.value)}
         />
 
         {/* 버튼 */}
