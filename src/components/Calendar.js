@@ -122,45 +122,59 @@ const Calendar = () => {
     return filteredSubSchedules.map((schedule, index) => {
       const scheduleStart = new Date(schedule.start_time);
       const scheduleEnd = new Date(schedule.end_time);
+      const scheduleColor = schedule.color || "#ddd"; // 기본 색상 설정
+      const scheduleTitle = schedule.title;
 
-      // 하루 총 분
-      const totalMinutesInDay = 24 * 60;
-      const startOfDayTime = startOfDay(scheduleStart).getTime();
+      const divs = [];
 
-      // 일정의 시작 위치를 계산 (0 ~ 100% 사이)
-      const minutesFromTop =
-        ((scheduleStart - startOfDayTime) / (totalMinutesInDay * 60000)) * 100;
+      let currentStart = new Date(scheduleStart);
 
-      // 일정의 길이 계산 (분 단위)
-      const scheduleDuration = differenceInMinutes(scheduleEnd, scheduleStart);
+      while (currentStart < scheduleEnd) {
+        const currentEnd = new Date(
+          Math.min(
+            startOfDay(new Date(currentStart)).getTime() + 24 * 60 * 60 * 1000,
+            scheduleEnd
+          )
+        ); // 현재 날짜의 끝 또는 scheduleEnd 중 더 이른 시간
 
-      // 일정의 높이 계산 (전체 높이의 퍼센트)
-      const scheduleHeight = (scheduleDuration / totalMinutesInDay) * 100;
+        const totalMinutesInDay = 24 * 60;
+        const startOfDayTime = startOfDay(currentStart).getTime();
 
-      // 일정이 시작되는 요일 계산 (0부터 6까지)
-      const dayIndex =
-        scheduleStart.getDay() === 0 ? 6 : scheduleStart.getDay() - 1;
+        const minutesFromTop =
+          ((currentStart - startOfDayTime) / (totalMinutesInDay * 60000)) * 100;
+        const scheduleDuration = differenceInMinutes(currentEnd, currentStart);
+        const scheduleHeight = (scheduleDuration / totalMinutesInDay) * 100;
 
-      return (
-        <div
-          key={index}
-          className="absolute flex justify-center items-center cursor-pointer"
-          style={{
-            top: `${minutesFromTop}%`,
-            height: `${scheduleHeight}%`,
-            left: `calc(${dayIndex * (100 / 7)}%)`,
-            width: `calc(${100 / 7}%)`,
-            backgroundColor: schedule.color || "#ddd", // 기본 색상 설정
-            zIndex: 5,
-            borderRadius: "4px",
-            overflow: "hidden",
-            padding: "2px",
-            boxSizing: "border-box",
-          }}
-        >
-          <div className="text-xs text-black text-center">{schedule.title}</div>
-        </div>
-      );
+        const dayIndex =
+          currentStart.getDay() === 0 ? 6 : currentStart.getDay() - 1;
+
+        divs.push(
+          <div
+            key={`${index}-${currentStart}`}
+            className="absolute flex justify-center items-center cursor-pointer"
+            style={{
+              top: `${minutesFromTop}%`,
+              height: `${scheduleHeight}%`,
+              left: `calc(${dayIndex * (100 / 7)}%)`,
+              width: `calc(${100 / 7}%)`,
+              backgroundColor: scheduleColor,
+              zIndex: 5,
+              borderRadius: "4px",
+              overflow: "hidden",
+              padding: "2px",
+              boxSizing: "border-box",
+            }}
+          >
+            <div className="text-xs text-black text-center">
+              {scheduleTitle}
+            </div>
+          </div>
+        );
+
+        currentStart = new Date(currentEnd); // 다음 날짜로 이동
+      }
+
+      return divs;
     });
   };
 
