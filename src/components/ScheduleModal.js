@@ -121,7 +121,7 @@ const ScheduleModal = ({ schedule, position, onClose, isClosing }) => {
       return true;
     }
 
-    // "지난 일정 포함" 옵션 상태에 따라 조건 분기
+    // "지난 목표 보기" 옵션 상태에 따라 조건 분기
     if (showPastSchedules) {
       return true; // 옵션 활성화 시 모든 일정 표시
     } else {
@@ -148,7 +148,9 @@ const ScheduleModal = ({ schedule, position, onClose, isClosing }) => {
             {filteredMainSchedules.map((sched) => (
               <option
                 className={`${
-                  sched.title === "목표 추가" ? "text-[#312a7a]" : ""
+                  sched.title === "목표 추가"
+                    ? "text-[#312a7a] font-semibold"
+                    : ""
                 }`}
                 key={sched.main_schedule_id}
                 value={sched.title}
@@ -157,11 +159,11 @@ const ScheduleModal = ({ schedule, position, onClose, isClosing }) => {
               </option>
             ))}
           </select>
-          {/* "지난 일정 포함" 체크박스 */}
+          {/* "지난 목표 보기" 체크박스 */}
           <label className="flex items-center space-x-1 cursor-pointer">
             {showPastSchedules ? (
               <FaCheckSquare
-                className="text-blue-600"
+                className="text-[#312a7a] cursor-pointer"
                 onClick={toggleShowPastSchedules}
               />
             ) : (
@@ -174,7 +176,7 @@ const ScheduleModal = ({ schedule, position, onClose, isClosing }) => {
               className="text-sm text-gray-700"
               onClick={toggleShowPastSchedules}
             >
-              지난 일정 포함
+              지난 목표 보기
             </span>
           </label>
         </div>
@@ -190,7 +192,7 @@ const ScheduleModal = ({ schedule, position, onClose, isClosing }) => {
         )}
 
         {/* 제목 추가 */}
-        <div className="flex flex-col space-y-2 mt-4">
+        <div className="flex space-x-2 mt-4">
           <input
             type="text"
             placeholder="일정을 입력하세요."
@@ -198,12 +200,35 @@ const ScheduleModal = ({ schedule, position, onClose, isClosing }) => {
             value={subScheduleTitle}
             onChange={(e) => setSubScheduleTitle(e.target.value)}
           />
+          {/* 색상 선택 */}
+          <div className="flex items-center space-x-2 relative">
+            <div
+              className="w-8 h-8 rounded-full cursor-pointer border-[2px] border-gray-200"
+              style={{ backgroundColor: color }}
+              onClick={() => setColorPickerVisible(!colorPickerVisible)}
+            ></div>
+            {colorPickerVisible && (
+              <div className="flex flex-wrap w-40 p-2 bg-white border-[2px] border-gray-300 rounded shadow-lg absolute z-20 top-10 left-0">
+                {predefinedColors.map((c) => (
+                  <div
+                    key={c}
+                    className="w-6 h-6 m-1 rounded-full cursor-pointer "
+                    style={{ backgroundColor: c }}
+                    onClick={() => {
+                      setColor(c);
+                      setColorPickerVisible(false);
+                    }}
+                  ></div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Duration Control */}
         <div className="flex items-center justify-between mt-4">
           <span className="text-gray-700 text-sm">시간 조정</span>
-          <div className="flex items-center space-x-4 mr-5">
+          <div className="flex items-center space-x-4">
             <FaMinusCircle
               className="text-[#312a7a] text-3xl cursor-pointer"
               onClick={decrementDuration}

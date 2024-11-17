@@ -1,11 +1,10 @@
-// stores/useScheduleStore.js
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 const useScheduleStore = create(
   persist(
     (set, get) => ({
-      // Main schedules reflecting the database structure
+      // 메인 일정
       mainSchedules: [
         {
           main_schedule_id: 1,
@@ -17,60 +16,38 @@ const useScheduleStore = create(
           created_at: new Date("2023-11-01T12:00:00"),
           updated_at: new Date("2023-11-10T12:00:00"),
         },
-        {
-          main_schedule_id: 2,
-          user_id: 102,
-          title: "기본일정",
-          start_time: new Date("2023-11-17T14:00:00"),
-          end_time: new Date("2029-11-17T15:00:00"),
-          color: "#33FF57",
-          created_at: new Date("2023-11-05T10:00:00"),
-          updated_at: new Date("2023-11-10T14:00:00"),
-        },
-        {
-          main_schedule_id: 3,
-          user_id: 101,
-          title: "도커공부",
-          start_time: new Date("2023-11-18T16:00:00"),
-          end_time: new Date("2026-11-18T17:00:00"),
-          color: "#3357FF",
-          created_at: new Date("2023-11-06T14:00:00"),
-          updated_at: new Date("2023-11-12T16:00:00"),
-        },
-        {
-          main_schedule_id: 4,
-          user_id: 101,
-          title: "스프링공부",
-          start_time: new Date("2023-11-19T10:00:00"),
-          end_time: new Date("2023-11-19T12:00:00"),
-          color: "#FF33A8",
-          created_at: new Date("2023-11-07T09:00:00"),
-          updated_at: new Date("2023-11-13T11:00:00"),
-        },
+        // ... 다른 일정들
       ],
 
-      currentDate: new Date(),
+      currentDate: new Date(), // 현재 날짜
 
-      // Selected schedule for operations
+      // 선택된 일정
       selectedSchedule: null,
       setSelectedSchedule: (schedule) => set({ selectedSchedule: schedule }),
 
-      // Sub-schedules (if applicable)
+      // 서브 일정 관리
       subschedules: [],
 
-      // Save a new sub-schedule
+      // 서브 일정 초기화
+      initializeSubSchedules: (schedules) => {
+        set(() => ({
+          subschedules: schedules, // 로컬 스토리지에서 가져온 데이터를 직접 설정
+        }));
+      },
+
+      // 새로운 서브 일정 추가
       saveSubSchedule: (subschedule) =>
         set((state) => ({
           subschedules: [...state.subschedules, subschedule],
         })),
 
-      // Add a new main schedule
+      // 메인 일정 추가
       addMainSchedule: (schedule) =>
         set((state) => ({
           mainSchedules: [...state.mainSchedules, schedule],
         })),
 
-      // Update an existing main schedule
+      // 기존 메인 일정 업데이트
       updateMainSchedule: (updatedSchedule) =>
         set((state) => ({
           mainSchedules: state.mainSchedules.map((schedule) =>
@@ -80,7 +57,7 @@ const useScheduleStore = create(
           ),
         })),
 
-      // Delete a main schedule
+      // 메인 일정 삭제
       deleteMainSchedule: (scheduleId) =>
         set((state) => ({
           mainSchedules: state.mainSchedules.filter(
@@ -88,23 +65,21 @@ const useScheduleStore = create(
           ),
         })),
 
-      // "지난 일정 포함" 상태 추가
+      // 지난 일정 보기 상태 토글
       showPastSchedules: false,
       toggleShowPastSchedules: () =>
         set((state) => ({ showPastSchedules: !state.showPastSchedules })),
     }),
     {
-      name: "schedule-storage", // unique name
-      getStorage: () => localStorage, // specify storage
+      name: "schedule-storage",
+      getStorage: () => localStorage,
       serialize: (state) =>
         JSON.stringify(state, (key, value) => {
           if (value instanceof Date) {
-            // Date 객체를 ISO 문자열로 변환
             return value.toISOString();
           }
           return value;
         }),
-
       deserialize: (str) =>
         JSON.parse(str, (key, value) => {
           const dateKeys = [
@@ -114,7 +89,6 @@ const useScheduleStore = create(
             "updated_at",
           ];
           if (dateKeys.includes(key) && typeof value === "string") {
-            // 특정 키의 ISO 문자열을 Date 객체로 변환
             return new Date(value);
           }
           return value;

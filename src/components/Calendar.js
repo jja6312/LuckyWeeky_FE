@@ -1,10 +1,8 @@
 // components/Calendar.jsx
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   format,
   startOfWeek,
-  addDays,
-  isToday,
   parseISO,
   differenceInMinutes,
   startOfDay,
@@ -14,52 +12,7 @@ import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import useStore from "../stores/useStore";
 import useScheduleStore from "../stores/scheduleStore";
 import ScheduleModal from "./ScheduleModal";
-
-const WeekHeader = ({ startOfCurrentWeek }) => {
-  return (
-    <div
-      className="grid border-b sticky top-0 bg-white z-10"
-      style={{
-        gridTemplateColumns: "102.4px repeat(7, minmax(0, 1fr))",
-        boxSizing: "border-box",
-      }}
-    >
-      <div className="border-r h-16"></div>
-      {[...Array(7)].map((_, index) => {
-        const day = addDays(startOfCurrentWeek, index);
-        const isCurrentDay = isToday(day);
-
-        return (
-          <div
-            key={index}
-            className="border-r text-center h-16 flex items-center justify-center"
-          >
-            <div className="flex justify-center items-center">
-              <span
-                className={`text-sm ${
-                  isCurrentDay ? "font-bold text-black" : "text-gray-500"
-                }`}
-              >
-                {format(day, "EEE")}
-              </span>
-              <div
-                className={`flex items-center justify-center rounded-full w-6 h-6 ${
-                  isCurrentDay ? "ml-2 bg-blue-500 text-white font-bold" : ""
-                }`}
-              >
-                <span
-                  className={`text-sm ${isCurrentDay ? "" : "text-gray-500"}`}
-                >
-                  {format(day, "d")}
-                </span>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
+import WeekHeader from "./WeekHeader";
 
 const Calendar = () => {
   const currentWeek = useStore((state) => state.currentWeek);
@@ -73,16 +26,9 @@ const Calendar = () => {
   const [modalPosition, setModalPosition] = useState({ top: 0, left: 0 });
 
   const subschedules = useScheduleStore((state) => state.subschedules);
-  const isHydrated = useScheduleStore.persist.hasHydrated(); // Zustand 상태 복원 확인
 
   const startOfCurrentWeek = startOfWeek(currentWeek, { weekStartsOn: 1 });
   const endOfCurrentWeek = endOfWeek(currentWeek, { weekStartsOn: 1 });
-
-  useEffect(() => {
-    if (!isHydrated) {
-      console.log("Loading schedules...");
-    }
-  }, [isHydrated]);
 
   const handleWeekChange = (event) => {
     const selectedDate = parseISO(event.target.value);
@@ -147,39 +93,50 @@ const Calendar = () => {
     closeModal();
   };
 
-  if (!isHydrated) {
-    return <div>Loading...</div>; // 상태 복원이 완료되지 않으면 로딩 화면 표시
-  }
+  // 현재 주에 해당하는 일정 필터링
+  const filteredSubSchedules = useMemo(() => {
+    return subschedules.filter((schedule) => {
+      const scheduleStart = new Date(schedule.start_time); // Date 변환 보장
+      const scheduleEnd = new Date(schedule.end_time);
 
-  const filteredSubSchedules = subschedules.filter((schedule) => {
-    const scheduleStart = schedule.start_time;
-    const scheduleEnd = schedule.end_time;
+      return (
+        (scheduleStart >= startOfCurrentWeek &&
+          scheduleStart <= endOfCurrentWeek) ||
+        (scheduleEnd >= startOfCurrentWeek &&
+          scheduleEnd <= endOfCurrentWeek) ||
+        (scheduleStart <= startOfCurrentWeek && scheduleEnd >= endOfCurrentWeek)
+      );
+    });
+  }, [subschedules, startOfCurrentWeek, endOfCurrentWeek]);
 
-    return (
-      (scheduleStart >= startOfCurrentWeek &&
-        scheduleStart <= endOfCurrentWeek) ||
-      (scheduleEnd >= startOfCurrentWeek && scheduleEnd <= endOfCurrentWeek) ||
-      (scheduleStart <= startOfCurrentWeek && scheduleEnd >= endOfCurrentWeek)
-    );
-  });
-
+  // 시간대를 나타내는 배열 생성 (0시부터 23시까지)
   const hours = [...Array(24)].map((_, i) => i);
 
+  // 일정 렌더링 함수
   const renderSchedules = () => {
-    return filteredSubSchedules.map((schedule, index) => {
-      const scheduleStart = schedule.start_time;
-      const scheduleEnd = schedule.end_time;
+    if (!filteredSubSchedules || filteredSubSchedules.length === 0) {
+      return null; // 일정이 없으면 아무것도 렌더링하지 않음
+    }
 
+    return filteredSubSchedules.map((schedule, index) => {
+      const scheduleStart = new Date(schedule.start_time);
+      const scheduleEnd = new Date(schedule.end_time);
+
+      // 하루 총 분
       const totalMinutesInDay = 24 * 60;
       const startOfDayTime = startOfDay(scheduleStart).getTime();
 
+      // 일정의 시작 위치를 계산 (0 ~ 100% 사이)
       const minutesFromTop =
         ((scheduleStart - startOfDayTime) / (totalMinutesInDay * 60000)) * 100;
 
+      // 일정의 길이 계산 (분 단위)
       const scheduleDuration = differenceInMinutes(scheduleEnd, scheduleStart);
 
+      // 일정의 높이 계산 (전체 높이의 퍼센트)
       const scheduleHeight = (scheduleDuration / totalMinutesInDay) * 100;
 
+      // 일정이 시작되는 요일 계산 (0부터 6까지)
       const dayIndex =
         scheduleStart.getDay() === 0 ? 6 : scheduleStart.getDay() - 1;
 
@@ -192,9 +149,9 @@ const Calendar = () => {
             height: `${scheduleHeight}%`,
             left: `calc(${dayIndex * (100 / 7)}%)`,
             width: `calc(${100 / 7}% - 1px)`,
-            backgroundColor: schedule.color,
+            backgroundColor: schedule.color || "#ddd", // 기본 색상 설정
             zIndex: 5,
-            borderRadius: "0px",
+            borderRadius: "4px",
             overflow: "hidden",
             padding: "2px",
             boxSizing: "border-box",
@@ -205,6 +162,24 @@ const Calendar = () => {
       );
     });
   };
+
+  useEffect(() => {
+    const schedules =
+      JSON.parse(localStorage.getItem("schedule-storage")) || [];
+    console.log("로컬 스토리지에서 불러온 일정: ", schedules);
+
+    if (schedules.length > 0) {
+      useScheduleStore.getState().initializeSubSchedules(schedules); // 상태 초기화
+    }
+  }, []); // 첫 렌더링 시 한 번 실행
+
+  // subschedules 상태가 변경되었을 때 실행
+  useEffect(() => {
+    console.log("현재 subschedules: ", subschedules);
+    if (subschedules.length > 0) {
+      console.log("일정 불러오기 완료");
+    }
+  }, [subschedules]); // subschedules가 변경될 때 실행
 
   return (
     <div
