@@ -17,7 +17,7 @@ const SlideBar = () => {
   const icons = [
     { name: "aiAddSchedule", icon: FaCalendarPlus, label: "AI 일정 추가" },
     { name: "detailSchedule", icon: FaRegListAlt, label: "상세 일정" },
-    { name: "friendManagement", icon: FaUserFriends, label: "친구 관리" },
+    // { name: "friendManagement", icon: FaUserFriends, label: "친구 관리" },
   ];
 
   return (

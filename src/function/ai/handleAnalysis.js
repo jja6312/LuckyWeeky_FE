@@ -1,4 +1,9 @@
-export const handleAnalysis = ({ formData, validateAll, resetForm }) => {
+export const handleAnalysis = ({
+  formData,
+  validateAll,
+  resetForm,
+  setSelectedIcon,
+}) => {
   if (!validateAll()) {
     return;
   }
@@ -12,4 +17,5 @@ export const handleAnalysis = ({ formData, validateAll, resetForm }) => {
     `);
 
   resetForm();
+  setSelectedIcon("suggestionSchedule");
 };

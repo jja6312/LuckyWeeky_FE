@@ -3,6 +3,7 @@ import useScheduleStore from "../stores/useScheduleStore";
 import DetailSchedule from "./DetailSchedule";
 import EditSchedule from "./EditSchedule";
 import AIAddSchedule from "./AIAddSchedule";
+import AISuggestionSchedule from "./AISuggestionSchedule";
 
 const SlideContent = ({ isSidebarOpen, selectedIcon }) => {
   const selectedSchedule = useScheduleStore((state) => state.selectedSchedule);
@@ -46,6 +47,9 @@ const SlideContent = ({ isSidebarOpen, selectedIcon }) => {
       ) : null}
       {/* AI일정 */}
       {selectedIcon === "aiAddSchedule" && <AIAddSchedule />}
+
+      {/* AI일정 확인 및 수정 */}
+      {selectedIcon === "suggestionSchedule" && <AISuggestionSchedule />}
 
       {/*  수정페이지 */}
       {selectedIcon === "editSchedule" && <EditSchedule />}

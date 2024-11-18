@@ -1,16 +1,29 @@
-import React from "react";
+import React, { useEffect } from "react";
 import useAiInputStore from "../stores/useAiInputStore";
 import { handleAnalysis } from "../function/ai/handleAnalysis";
 import useStore from "../stores/useStore";
 
 const AIAddText = () => {
-  const { formData, errors, setField, validateAll, resetForm } =
-    useAiInputStore();
-
+  // Zustand stores에서 필요한 상태와 메서드 가져오기
+  const {
+    formData = {},
+    errors = {},
+    setField,
+    validateAll,
+    resetForm,
+  } = useAiInputStore();
   const { setSelectedIcon } = useStore();
 
+  // 디버깅용 useEffect: formData 초기화 상태 확인
+  useEffect(() => {
+    if (!formData.startDateTime || !formData.endDateTime) {
+      console.warn("formData is not fully initialized. Check Zustand store.");
+    }
+  }, [formData]);
+
+  // 입력 필드 값 변경 핸들러
   const handleInputChange = (key, value) => {
-    setField(key, value);
+    setField(key, value); // Zustand store의 setField 메서드 호출
   };
 
   return (
@@ -115,8 +128,7 @@ const AIAddText = () => {
       <button
         className="w-full bg-[#312a7a] text-white rounded p-2 hover:opacity-80 transition"
         onClick={() => {
-          handleAnalysis({ formData, validateAll, resetForm });
-          setSelectedIcon("suggestionSchedule");
+          handleAnalysis({ formData, validateAll, resetForm, setSelectedIcon });
         }}
       >
         분석 시작
