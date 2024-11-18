@@ -46,8 +46,8 @@ const AIAddVoice = () => {
                 formData: { transcription }, // formData에 transcription만 포함
                 validateAll: () => true, // 밸리데이션 항상 통과
                 resetForm,
+                setSelectedIcon,
               });
-              setSelectedIcon("suggestionSchedule");
             }}
           >
             분석 시작
