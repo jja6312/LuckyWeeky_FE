@@ -4,9 +4,8 @@ import React from "react";
 const IconButton = ({ icon: Icon, isSelected, onClick, label }) => {
   return (
     <button
-      className={`w-full flex flex-col justify-center items-center transition-colors duration-200 ${
-        isSelected ? "text-indigo-300" : "text-white hover:text-indigo-200"
-      }`}
+      className={`w-full flex flex-col justify-center items-center transition-colors duration-200  pt-4
+        ${isSelected ? "text-indigo-300" : "text-white hover:text-indigo-200"}`}
       onClick={onClick}
     >
       <Icon size={24} />

@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import useScheduleStore from "../stores/useScheduleStore";
 import DetailSchedule from "./DetailSchedule";
 import EditSchedule from "./EditSchedule";
+import AIAddSchedule from "./AIAddSchedule";
 
 const SlideContent = ({ isSidebarOpen, selectedIcon }) => {
   const selectedSchedule = useScheduleStore((state) => state.selectedSchedule);
@@ -14,7 +15,7 @@ const SlideContent = ({ isSidebarOpen, selectedIcon }) => {
   }, [selectedSchedule]);
 
   const contentMap = {
-    addSchedule: {
+    aiAddSchedule: {
       title: "AI 캘린더 일정 추가",
       description: "AI를 활용하여 빠르게 일정을 추가하세요.",
     },
@@ -43,7 +44,10 @@ const SlideContent = ({ isSidebarOpen, selectedIcon }) => {
       {content ? (
         <>{selectedIcon === "detailSchedule" && <DetailSchedule />}</>
       ) : null}
+      {/* AI일정 */}
+      {selectedIcon === "aiAddSchedule" && <AIAddSchedule />}
 
+      {/*  수정페이지 */}
       {selectedIcon === "editSchedule" && <EditSchedule />}
     </div>
   );

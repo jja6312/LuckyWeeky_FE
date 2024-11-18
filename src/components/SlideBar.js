@@ -15,7 +15,7 @@ const SlideBar = () => {
     useStore();
 
   const icons = [
-    { name: "addSchedule", icon: FaCalendarPlus, label: "AI 일정 추가" },
+    { name: "aiAddSchedule", icon: FaCalendarPlus, label: "AI 일정 추가" },
     { name: "detailSchedule", icon: FaRegListAlt, label: "상세 일정" },
     { name: "friendManagement", icon: FaUserFriends, label: "친구 관리" },
   ];
@@ -31,7 +31,7 @@ const SlideBar = () => {
 
         {/* Icon Section */}
         <div
-          className={`flex flex-col items-center py-2 w-16 bg-[#463198] text-white h-full relative transition-all duration-300 ${
+          className={`flex flex-col items-center  w-16 bg-[#463198] text-white h-full relative transition-all duration-300 ${
             isSidebarOpen ? "ml-96" : ""
           }`}
           onClick={toggleSidebar}
@@ -51,7 +51,7 @@ const SlideBar = () => {
           )}
 
           {/* Icons */}
-          <div className="w-full flex flex-col items-center space-y-6 mt-2">
+          <div className="w-full flex flex-col items-center ">
             {icons.map((item) => (
               <IconButton
                 key={item.name}

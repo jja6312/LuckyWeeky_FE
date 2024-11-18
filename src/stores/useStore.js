@@ -20,7 +20,7 @@ const useStore = create((set) => ({
   toggleSidebar: () =>
     set((state) => ({
       isSidebarOpen: !state.isSidebarOpen,
-      selectedIcon: !state.isSidebarOpen ? "addSchedule" : null,
+      selectedIcon: !state.isSidebarOpen ? "" : null,
     })),
 
   currentWeek: new Date(),
