@@ -15,8 +15,6 @@ const AIAddText = () => {
 
   return (
     <div className="p-4 bg-white shadow-lg rounded-lg max-w-md mx-auto">
-      <h2 className="text-2xl font-bold text-center mb-4">🤖 AI 일정 추가</h2>
-
       {/* 시작 시간 */}
       <div className="mb-3">
         <label className="block text-sm text-gray-600 mb-1 text-left">
