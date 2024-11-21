@@ -2,32 +2,62 @@ import React, { useEffect, useState } from "react";
 import useAiInputStore from "../stores/useAiInputStore";
 import useScheduleStore from "../stores/useScheduleStore";
 import { FaEdit, FaTrash, FaSave } from "react-icons/fa";
+import { format, parseISO } from "date-fns";
+
+// 밝기 계산 함수
+const isColorDark = (color) => {
+  const r = parseInt(color.slice(1, 3), 16);
+  const g = parseInt(color.slice(3, 5), 16);
+  const b = parseInt(color.slice(5, 7), 16);
+  // 밝기 공식
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness < 128; // 밝기가 낮으면 어두운 색상
+};
 
 const AISuggestionSchedule = () => {
-  const { dummySchedule, generateDummySchedule, formData, updateTaskColors } =
-    useAiInputStore();
+  const { schedules } = useAiInputStore();
   const { predefinedColors } = useScheduleStore();
 
   const [expandedDays, setExpandedDays] = useState({});
   const [colorPickerVisible, setColorPickerVisible] = useState(false);
   const [selectedColor, setSelectedColor] = useState(predefinedColors[0]); // 기본 색상
   const [editingTask, setEditingTask] = useState(null); // 현재 수정 중인 task
+  const [groupedSchedule, setGroupedSchedule] = useState([]); // 요일별로 변환된 스케줄
 
   useEffect(() => {
-    if (formData?.startDateTime && formData?.endDateTime) {
-      generateDummySchedule();
-    } else {
-      console.warn("Invalid formData. Skipping schedule generation.");
-    }
-  }, [formData.startDateTime, formData.endDateTime, generateDummySchedule]);
+    // schedules 데이터를 요일별로 변환
+    const grouped = [
+      { dayName: "Monday", tasks: [] },
+      { dayName: "Tuesday", tasks: [] },
+      { dayName: "Wednesday", tasks: [] },
+      { dayName: "Thursday", tasks: [] },
+      { dayName: "Friday", tasks: [] },
+      { dayName: "Saturday", tasks: [] },
+      { dayName: "Sunday", tasks: [] },
+    ];
 
-  useEffect(() => {
+    schedules.forEach((schedule) => {
+      schedule.subSchedules.forEach((sub) => {
+        const dayIndex = parseISO(sub.startTime).getDay(); // 요일 index
+        grouped[dayIndex].tasks.push({
+          mainScheduleTitle: schedule.mainTitle,
+          subScheduleTitle: sub.title,
+          start_time: format(parseISO(sub.startTime), "HH:mm"), // 시간만 추출
+          end_time: format(parseISO(sub.endTime), "HH:mm"), // 시간만 추출
+          color: selectedColor,
+        });
+      });
+    });
+
+    setGroupedSchedule(grouped.filter((day) => day.tasks.length > 0)); // 스케줄이 없는 요일 제거
+
+    // 모든 요일 기본 열림 상태 설정
     const initialExpandedDays = {};
-    dummySchedule.forEach((day, index) => {
-      initialExpandedDays[index] = day.tasks.length > 0; // 일정이 있는 요일 펼침
+    grouped.forEach((day, index) => {
+      initialExpandedDays[index] = true; // 기본 열림 상태로 설정
     });
     setExpandedDays(initialExpandedDays);
-  }, [dummySchedule]);
+  }, [schedules, selectedColor]);
 
   const toggleDay = (dayIndex) => {
     setExpandedDays((prev) => ({
@@ -38,27 +68,49 @@ const AISuggestionSchedule = () => {
 
   const handleColorSelect = (color) => {
     setSelectedColor(color);
-    updateTaskColors(color); // 즉시 모든 일정의 색상을 업데이트
+
+    // 선택된 색상으로 모든 task 색상 업데이트
+    const updatedSchedule = groupedSchedule.map((day) => ({
+      ...day,
+      tasks: day.tasks.map((task) => ({
+        ...task,
+        color,
+      })),
+    }));
+    setGroupedSchedule(updatedSchedule);
     setColorPickerVisible(false);
   };
 
-  const handleEditTask = (task) => {
-    setEditingTask({ ...task });
+  const handleEditTask = (dayIndex, taskIndex) => {
+    setEditingTask({
+      dayIndex,
+      taskIndex,
+      ...groupedSchedule[dayIndex].tasks[taskIndex],
+    });
   };
 
-  const handleSaveTask = (dayIndex, taskIndex) => {
-    const updatedSchedule = [...dummySchedule];
-    updatedSchedule[dayIndex].tasks[taskIndex] = editingTask;
+  const handleSaveTask = () => {
+    if (editingTask === null) return;
+
+    const updatedSchedule = [...groupedSchedule];
+    const { dayIndex, taskIndex } = editingTask;
+    updatedSchedule[dayIndex].tasks[taskIndex] = {
+      ...updatedSchedule[dayIndex].tasks[taskIndex],
+      subScheduleTitle: editingTask.subScheduleTitle,
+      start_time: editingTask.start_time,
+      end_time: editingTask.end_time,
+    };
+
+    setGroupedSchedule(updatedSchedule);
     setEditingTask(null);
   };
 
   const handleDeleteTask = (dayIndex, taskIndex) => {
-    const updatedSchedule = [...dummySchedule];
+    const updatedSchedule = [...groupedSchedule];
     updatedSchedule[dayIndex].tasks.splice(taskIndex, 1);
-    setExpandedDays((prev) => ({
-      ...prev,
-      [dayIndex]: updatedSchedule[dayIndex].tasks.length > 0,
-    }));
+    setGroupedSchedule(
+      updatedSchedule.filter((day) => day.tasks.length > 0) // 스케줄 없는 요일 제거
+    );
   };
 
   return (
@@ -85,7 +137,7 @@ const AISuggestionSchedule = () => {
           </div>
         )}
       </div>
-      {dummySchedule?.map((day, dayIndex) => (
+      {groupedSchedule.map((day, dayIndex) => (
         <div key={dayIndex} className="mb-4">
           <div
             className="font-semibold text-[#4442b1] cursor-pointer flex justify-between items-center"
@@ -109,13 +161,38 @@ const AISuggestionSchedule = () => {
             {day.tasks.map((task, taskIndex) => (
               <div
                 key={taskIndex}
-                className="p-4 rounded mb-2 flex flex-col space-y-2"
-                style={{ backgroundColor: task.color || selectedColor }}
+                className="p-4 rounded mb-2 flex flex-col space-y-2 relative"
+                style={{
+                  backgroundColor: task.color,
+                  color: isColorDark(task.color) ? "white" : "black", // 글자색 조정
+                }}
               >
-                {/* Start & End Time */}
-                <div className="text-sm text-gray-500 flex justify-between items-center">
+                {/* 수정 및 삭제 버튼 */}
+                <div className="absolute top-2 right-2 flex space-x-2">
                   {editingTask &&
-                  editingTask.subScheduleTitle === task.subScheduleTitle ? (
+                  editingTask.dayIndex === dayIndex &&
+                  editingTask.taskIndex === taskIndex ? (
+                    <FaSave
+                      className="text-gray-400 hover:text-[#312a7a] cursor-pointer"
+                      onClick={handleSaveTask}
+                    />
+                  ) : (
+                    <FaEdit
+                      className="text-gray-400 hover:text-[#312a7a] cursor-pointer"
+                      onClick={() => handleEditTask(dayIndex, taskIndex)}
+                    />
+                  )}
+                  <FaTrash
+                    className="text-gray-400 hover:text-[#FF5733] cursor-pointer"
+                    onClick={() => handleDeleteTask(dayIndex, taskIndex)}
+                  />
+                </div>
+
+                {/* Start & End Time */}
+                <div className="text-sm flex justify-between items-center">
+                  {editingTask &&
+                  editingTask.dayIndex === dayIndex &&
+                  editingTask.taskIndex === taskIndex ? (
                     <>
                       <input
                         type="time"
@@ -126,7 +203,7 @@ const AISuggestionSchedule = () => {
                             start_time: e.target.value,
                           })
                         }
-                        className="border rounded px-2 py-1 text-sm"
+                        className="border rounded px-2 py-1 text-sm text-black"
                       />
                       <input
                         type="time"
@@ -137,7 +214,7 @@ const AISuggestionSchedule = () => {
                             end_time: e.target.value,
                           })
                         }
-                        className="border rounded px-2 py-1 text-sm"
+                        className="border rounded px-2 py-1 text-sm text-black"
                       />
                     </>
                   ) : (
@@ -150,7 +227,8 @@ const AISuggestionSchedule = () => {
                 {/* Task Title */}
                 <div className="text-gray-800 font-bold flex justify-between items-center">
                   {editingTask &&
-                  editingTask.subScheduleTitle === task.subScheduleTitle ? (
+                  editingTask.dayIndex === dayIndex &&
+                  editingTask.taskIndex === taskIndex ? (
                     <input
                       type="text"
                       value={editingTask.subScheduleTitle}
@@ -160,29 +238,11 @@ const AISuggestionSchedule = () => {
                           subScheduleTitle: e.target.value,
                         })
                       }
-                      className="border rounded px-2 py-1 w-full"
+                      className="border rounded px-2 py-1 w-full text-black"
                     />
                   ) : (
                     task.subScheduleTitle
                   )}
-                  <div className="space-x-2 flex">
-                    {editingTask &&
-                    editingTask.subScheduleTitle === task.subScheduleTitle ? (
-                      <FaSave
-                        className="text-gray-400 hover:text-[#312a7a] cursor-pointer"
-                        onClick={() => handleSaveTask(dayIndex, taskIndex)}
-                      />
-                    ) : (
-                      <FaEdit
-                        className="text-gray-400 hover:text-[#312a7a] cursor-pointer"
-                        onClick={() => handleEditTask(task)}
-                      />
-                    )}
-                    <FaTrash
-                      className="text-gray-400 hover:text-[#FF5733] cursor-pointer"
-                      onClick={() => handleDeleteTask(dayIndex, taskIndex)}
-                    />
-                  </div>
                 </div>
               </div>
             ))}

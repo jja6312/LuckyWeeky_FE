@@ -1,45 +1,12 @@
 import { create } from "zustand";
 import { format, addDays } from "date-fns";
 
-// Helper to generate dummy schedule data
-const generateDummySchedules = (startDateTime, endDateTime) => {
-  const schedules = [];
-  let currentDate = new Date(startDateTime);
-
-  while (currentDate <= new Date(endDateTime)) {
-    const daySchedule = {
-      dayName: format(currentDate, "EEEE"),
-      tasks: [
-        {
-          mainScheduleTitle: "헬스장 가기",
-          subScheduleTitle: "유산소 운동",
-          start_time: "16:00",
-          end_time: "17:30",
-          description: "런닝머신과 사이클 운동",
-          color: "#FF5733", // 기본 색상 추가
-        },
-        {
-          mainScheduleTitle: "독서하기",
-          subScheduleTitle: "개발 서적 읽기",
-          start_time: "19:00",
-          end_time: "20:30",
-          description: "프로그래밍 언어 심화 학습",
-          color: "#FF5733", // 기본 색상 추가
-        },
-      ],
-    };
-
-    schedules.push(daySchedule);
-    currentDate = addDays(currentDate, 1);
-  }
-
-  return schedules;
-};
-
+// 오늘과 1주일 후 날짜 설정
 const today = new Date();
 const oneWeekLater = addDays(today, 7);
 
 const useAiInputStore = create((set, get) => ({
+  // 모드 상태 (text/voice)
   mode: "text",
   toggleMode: () =>
     set((state) => ({ mode: state.mode === "text" ? "voice" : "text" })),
@@ -53,6 +20,7 @@ const useAiInputStore = create((set, get) => ({
     additionalNotes: "",
   },
 
+  // 에러 상태
   errors: {
     startDateTime: "",
     endDateTime: "",
@@ -60,8 +28,10 @@ const useAiInputStore = create((set, get) => ({
     availableTime: "",
   },
 
-  dummySchedule: [],
+  // AI 생성된 일정 데이터 배열
+  schedules: [],
 
+  // 폼 유효성 검사
   validateField: (key, value) => {
     const { formData } = get();
     let error = "";
@@ -128,55 +98,42 @@ const useAiInputStore = create((set, get) => ({
       },
     })),
 
-  generateDummySchedule: () => {
-    const { formData } = get();
+  // 서버에서 받은 데이터를 schedules 배열에 추가
+  pushToSchedules: (response) => {
+    const { result, schedule } = response;
+    if (result === "true") {
+      const formattedSchedule = {
+        mainTitle: schedule.mainTitle,
+        startTime: schedule.startTime,
+        endTime: schedule.endTime,
+        subSchedules: schedule.subSchedules.map((sub) => ({
+          title: sub.title,
+          startTime: sub.startTime,
+          endTime: sub.endTime,
+        })),
+      };
 
-    if (!formData?.startDateTime || !formData?.endDateTime) {
-      console.error("Invalid formData. Cannot generate schedules.");
-      return;
+      console.log("Formatted Schedule:", formattedSchedule); // 포맷팅된 데이터 확인
+
+      set((state) => ({
+        schedules: [...state.schedules, formattedSchedule],
+      }));
+    } else {
+      console.error("Invalid schedule response:", response);
     }
-
-    const schedule = generateDummySchedules(
-      formData.startDateTime,
-      formData.endDateTime
-    );
-    set({ dummySchedule: schedule });
   },
 
-  // 일정 색상 업데이트
-  updateTaskColors: (color) => {
-    const { dummySchedule } = get();
-    const updatedSchedule = dummySchedule.map((day) => ({
-      ...day,
-      tasks: day.tasks.map((task) => ({
-        ...task,
-        color,
-      })),
-    }));
-    set({ dummySchedule: updatedSchedule });
-  },
+  resetSchedules: () => set({ schedules: [] }),
 
   // 음성 입력 관련 상태와 메서드 추가
   recording: false,
   transcription: "",
   visualEffect: false,
 
-  startRecording: () => {
-    set({ recording: true, transcription: "", visualEffect: true });
-    console.log("Recording started");
-    setTimeout(() => set({ visualEffect: false }), 300);
-  },
-
-  stopRecording: () => {
-    const dummyTranscription = "예시로 받아온 음성 텍스트"; // 예시 텍스트
-    set({
-      recording: false,
-      visualEffect: false,
-      transcription: dummyTranscription,
-    });
-    console.log("Recording stopped");
-  },
-
+  startRecording: () =>
+    set({ recording: true, transcription: "", visualEffect: true }),
+  stopRecording: () => set({ recording: false, visualEffect: false }),
+  setTranscription: (text) => set({ transcription: text }), // STT 결과 업데이트
   clearTranscription: () => set({ transcription: "" }),
 }));
 
