@@ -1,11 +1,12 @@
 import React, { useEffect } from "react";
 import useAiInputStore from "../stores/useAiInputStore";
-import { handleAnalysis } from "../function/ai/handleAnalysis";
+import { createAiSchedule } from "../api/scheduleAi/createAiSchedule";
 import useStore from "../stores/useStore";
 
 const AIAddText = () => {
   // Zustand stores에서 필요한 상태와 메서드 가져오기
   const {
+    pushToSchedules,
     formData = {},
     errors = {},
     setField,
@@ -14,16 +15,41 @@ const AIAddText = () => {
   } = useAiInputStore();
   const { setSelectedIcon } = useStore();
 
-  // 디버깅용 useEffect: formData 초기화 상태 확인
-  useEffect(() => {
-    if (!formData.startDateTime || !formData.endDateTime) {
-      console.warn("formData is not fully initialized. Check Zustand store.");
-    }
-  }, [formData]);
-
   // 입력 필드 값 변경 핸들러
   const handleInputChange = (key, value) => {
     setField(key, value); // Zustand store의 setField 메서드 호출
+  };
+
+  const handleSubmit = async () => {
+    if (!validateAll()) {
+      alert("입력값을 확인해주세요."); // 유효성 검사 실패 시 처리
+      return;
+    }
+
+    const scheduleData = {
+      startDate: formData.startDateTime,
+      endDate: formData.endDateTime,
+      task: formData.task,
+      availableTime: formData.availableTime,
+      additionalRequest: formData.additionalNotes || null,
+    };
+
+    try {
+      // AI 일정 생성 요청
+      const aiGeneratedResult = await createAiSchedule(scheduleData);
+
+      // Zustand 상태 업데이트
+      pushToSchedules({ result: "true", schedule: aiGeneratedResult });
+
+      alert(
+        `AI 일정 생성 성공!\n생성된 일정: ${JSON.stringify(aiGeneratedResult)}`
+      );
+      resetForm(); // 폼 초기화
+      setSelectedIcon("suggestionSchedule");
+    } catch (error) {
+      console.error("Schedule creation failed:", error);
+      alert("일정 생성에 실패했습니다. 다시 시도해주세요.");
+    }
   };
 
   return (
@@ -127,9 +153,7 @@ const AIAddText = () => {
       {/* 제출 버튼 */}
       <button
         className="w-full bg-[#312a7a] text-white rounded p-2 hover:opacity-80 transition"
-        onClick={() => {
-          handleAnalysis({ formData, validateAll, resetForm, setSelectedIcon });
-        }}
+        onClick={handleSubmit}
       >
         분석 시작
       </button>
