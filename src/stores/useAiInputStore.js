@@ -125,6 +125,38 @@ const useAiInputStore = create((set, get) => ({
 
   resetSchedules: () => set({ schedules: [] }),
 
+  // 기존 일정 덮어쓰기
+  replaceSchedule: (response) => {
+    const { result, schedule } = response;
+    if (result === "true") {
+      const updatedSchedule = {
+        mainTitle: schedule.mainTitle,
+        startTime: schedule.startTime,
+        endTime: schedule.endTime,
+        subSchedules: schedule.subSchedules.map((sub) => ({
+          title: sub.title,
+          startTime: sub.startTime,
+          endTime: sub.endTime,
+        })),
+      };
+
+      console.log("Updated Schedule:", updatedSchedule); // 덮어쓴 데이터 확인
+
+      set((state) => {
+        const updatedSchedules = state.schedules.map((existingSchedule) =>
+          existingSchedule.id === schedule.id
+            ? updatedSchedule // 같은 ID인 경우 덮어쓰기
+            : existingSchedule
+        );
+        return { schedules: updatedSchedules };
+      });
+    } else {
+      console.error("Invalid schedule response:", response);
+    }
+  },
+
+  resetSchedules: () => set({ schedules: [] }),
+
   // 음성 입력 관련 상태와 메서드 추가
   recording: false,
   transcription: "",
