@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import useAiInputStore from "../stores/useAiInputStore";
 import { createAiSchedule } from "../api/scheduleAi/createAiSchedule";
 import useStore from "../stores/useStore";
@@ -14,6 +14,7 @@ const AIAddText = () => {
     resetForm,
   } = useAiInputStore();
   const { setSelectedIcon } = useStore();
+  const [isLoading, setIsLoading] = useState(false); // 로딩 상태 추가
 
   // 입력 필드 값 변경 핸들러
   const handleInputChange = (key, value) => {
@@ -33,6 +34,7 @@ const AIAddText = () => {
       availableTime: formData.availableTime,
       additionalRequest: formData.additionalNotes || null,
     };
+    setIsLoading(true); // 로딩 상태 활성화
 
     try {
       // AI 일정 생성 요청
@@ -49,6 +51,8 @@ const AIAddText = () => {
     } catch (error) {
       console.error("Schedule creation failed:", error);
       alert("일정 생성에 실패했습니다. 다시 시도해주세요.");
+    } finally {
+      setIsLoading(false); // 로딩 상태 비활성화
     }
   };
 
@@ -152,10 +156,14 @@ const AIAddText = () => {
 
       {/* 제출 버튼 */}
       <button
-        className="w-full bg-[#312a7a] text-white rounded p-2 hover:opacity-80 transition"
+        className="w-full bg-[#312a7a] text-white rounded p-2 hover:opacity-80 transition flex justify-center items-center"
         onClick={handleSubmit}
       >
-        분석 시작
+        {isLoading ? (
+          <div className="animate-spin border-t-4 border-white border-solid rounded-full w-8 h-8"></div>
+        ) : (
+          "분석 시작"
+        )}{" "}
       </button>
     </div>
   );

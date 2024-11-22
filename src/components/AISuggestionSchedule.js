@@ -3,58 +3,67 @@ import useAiInputStore from "../stores/useAiInputStore";
 import useScheduleStore from "../stores/useScheduleStore";
 import { FaEdit, FaTrash, FaSave } from "react-icons/fa";
 import { format, parseISO } from "date-fns";
+import { reRequestAiSchedule } from "../api/scheduleAi/reRequestAiSchedule";
 
 // 밝기 계산 함수
 const isColorDark = (color) => {
   const r = parseInt(color.slice(1, 3), 16);
   const g = parseInt(color.slice(3, 5), 16);
   const b = parseInt(color.slice(5, 7), 16);
-  // 밝기 공식
   const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-  return brightness < 128; // 밝기가 낮으면 어두운 색상
+  return brightness < 128;
 };
 
 const AISuggestionSchedule = () => {
-  const { schedules } = useAiInputStore();
+  const { schedules, replaceSchedule, resetForm } = useAiInputStore();
   const { predefinedColors } = useScheduleStore();
 
   const [expandedDays, setExpandedDays] = useState({});
   const [colorPickerVisible, setColorPickerVisible] = useState(false);
-  const [selectedColor, setSelectedColor] = useState(predefinedColors[0]); // 기본 색상
-  const [editingTask, setEditingTask] = useState(null); // 현재 수정 중인 task
-  const [groupedSchedule, setGroupedSchedule] = useState([]); // 요일별로 변환된 스케줄
+  const [selectedColor, setSelectedColor] = useState(predefinedColors[0]);
+  const [editingTask, setEditingTask] = useState(null);
+  const [groupedSchedule, setGroupedSchedule] = useState([]);
+  const [isReRequestLoading, setIsReRequestLoading] = useState(false);
+  const [reRequestText, setReRequestText] = useState(""); // 재요청 내용
 
   useEffect(() => {
-    // schedules 데이터를 요일별로 변환
-    const grouped = [
-      { dayName: "Monday", tasks: [] },
-      { dayName: "Tuesday", tasks: [] },
-      { dayName: "Wednesday", tasks: [] },
-      { dayName: "Thursday", tasks: [] },
-      { dayName: "Friday", tasks: [] },
-      { dayName: "Saturday", tasks: [] },
-      { dayName: "Sunday", tasks: [] },
-    ];
+    // 날짜 기반으로 정렬
+    const schedulesWithDates = schedules.flatMap((schedule) =>
+      schedule.subSchedules.map((sub) => ({
+        mainScheduleTitle: schedule.mainTitle,
+        subScheduleTitle: sub.title,
+        start_time: format(parseISO(sub.startTime), "HH:mm"),
+        end_time: format(parseISO(sub.endTime), "HH:mm"),
+        date: parseISO(sub.startTime),
+        color: selectedColor,
+      }))
+    );
 
-    schedules.forEach((schedule) => {
-      schedule.subSchedules.forEach((sub) => {
-        const dayIndex = parseISO(sub.startTime).getDay(); // 요일 index
-        grouped[dayIndex].tasks.push({
-          mainScheduleTitle: schedule.mainTitle,
-          subScheduleTitle: sub.title,
-          start_time: format(parseISO(sub.startTime), "HH:mm"), // 시간만 추출
-          end_time: format(parseISO(sub.endTime), "HH:mm"), // 시간만 추출
-          color: selectedColor,
-        });
-      });
-    });
+    // 날짜 순으로 정렬
+    schedulesWithDates.sort((a, b) => a.date - b.date);
 
-    setGroupedSchedule(grouped.filter((day) => day.tasks.length > 0)); // 스케줄이 없는 요일 제거
+    // 날짜별로 그룹화
+    const grouped = schedulesWithDates.reduce((acc, item) => {
+      const dayName = format(item.date, "EEEE"); // 요일 이름
+      if (!acc[dayName]) {
+        acc[dayName] = [];
+      }
+      acc[dayName].push(item);
+      return acc;
+    }, {});
 
-    // 모든 요일 기본 열림 상태 설정
+    // 그룹화된 데이터를 배열로 변환
+    const groupedArray = Object.keys(grouped).map((dayName) => ({
+      dayName,
+      tasks: grouped[dayName],
+    }));
+
+    setGroupedSchedule(groupedArray);
+
+    // 초기 expandedDays 설정
     const initialExpandedDays = {};
-    grouped.forEach((day, index) => {
-      initialExpandedDays[index] = true; // 기본 열림 상태로 설정
+    groupedArray.forEach((_, index) => {
+      initialExpandedDays[index] = true;
     });
     setExpandedDays(initialExpandedDays);
   }, [schedules, selectedColor]);
@@ -68,8 +77,6 @@ const AISuggestionSchedule = () => {
 
   const handleColorSelect = (color) => {
     setSelectedColor(color);
-
-    // 선택된 색상으로 모든 task 색상 업데이트
     const updatedSchedule = groupedSchedule.map((day) => ({
       ...day,
       tasks: day.tasks.map((task) => ({
@@ -108,15 +115,35 @@ const AISuggestionSchedule = () => {
   const handleDeleteTask = (dayIndex, taskIndex) => {
     const updatedSchedule = [...groupedSchedule];
     updatedSchedule[dayIndex].tasks.splice(taskIndex, 1);
-    setGroupedSchedule(
-      updatedSchedule.filter((day) => day.tasks.length > 0) // 스케줄 없는 요일 제거
-    );
+    setGroupedSchedule(updatedSchedule.filter((day) => day.tasks.length > 0));
+  };
+
+  const handleReRequest = async () => {
+    const reRequestData = {
+      originSchedule: JSON.stringify(schedules),
+      newAdditionalRequest: reRequestText,
+    };
+
+    setIsReRequestLoading(true);
+    try {
+      const reGeneratedSchedule = await reRequestAiSchedule(reRequestData);
+
+      // Zustand의 replaceSchedule 호출
+      replaceSchedule({ result: "true", schedule: reGeneratedSchedule });
+
+      resetForm(); // 폼 초기화
+      setReRequestText("");
+    } catch (error) {
+      console.error("Re-request failed:", error);
+      alert("재요청 실패: 다시 시도해주세요.");
+    } finally {
+      setIsReRequestLoading(false);
+    }
   };
 
   return (
     <div className="p-4 bg-white shadow-md rounded-md h-full overflow-y-auto relative">
       <h2 className="text-lg font-bold mb-4">아래와 같은 일정은 어떤가요?</h2>
-      {/* 색상 선택 */}
       <div className="mb-4 flex items-center space-x-2 relative">
         <span className="text-sm text-gray-600">색상</span>
         <div
@@ -164,10 +191,9 @@ const AISuggestionSchedule = () => {
                 className="p-4 rounded mb-2 flex flex-col space-y-2 relative"
                 style={{
                   backgroundColor: task.color,
-                  color: isColorDark(task.color) ? "white" : "black", // 글자색 조정
+                  color: isColorDark(task.color) ? "white" : "black",
                 }}
               >
-                {/* 수정 및 삭제 버튼 */}
                 <div className="absolute top-2 right-2 flex space-x-2">
                   {editingTask &&
                   editingTask.dayIndex === dayIndex &&
@@ -187,8 +213,6 @@ const AISuggestionSchedule = () => {
                     onClick={() => handleDeleteTask(dayIndex, taskIndex)}
                   />
                 </div>
-
-                {/* Start & End Time */}
                 <div className="text-sm flex justify-between items-center">
                   {editingTask &&
                   editingTask.dayIndex === dayIndex &&
@@ -223,9 +247,7 @@ const AISuggestionSchedule = () => {
                     </>
                   )}
                 </div>
-
-                {/* Task Title */}
-                <div className="text-gray-800 font-bold flex justify-between items-center">
+                <div className="text-gray-800 font-bold">
                   {editingTask &&
                   editingTask.dayIndex === dayIndex &&
                   editingTask.taskIndex === taskIndex ? (
@@ -249,22 +271,31 @@ const AISuggestionSchedule = () => {
           </div>
         </div>
       ))}
-      {/* 고정 버튼 영역 */}
       <div className="fixed bottom-0 left-0 w-full h-32 bg-white p-4 shadow-md flex items-center justify-between border-2 border-[#312a7a]">
         <textarea
           className="w-2/4 p-2 h-full border rounded text-sm"
           rows={2}
           placeholder="재요청 사항을 입력하세요."
+          value={reRequestText}
+          onChange={(e) => setReRequestText(e.target.value)}
         ></textarea>
-        <button className="w-1/4 h-full text-lg transition-all duration-150  text-[#312a7a] border-2 border-[#bdbadd] px-4 py-2 rounded hover:bg-[#dcdaf3]">
-          재요청
+        <button
+          className="w-1/4 h-full border-2 border-[#312a7a] text-[#312a7a] rounded p-2 hover:opacity-80 transition flex justify-center items-center"
+          onClick={handleReRequest}
+        >
+          {isReRequestLoading ? (
+            <div className="animate-spin border-t-4 border-white border-solid rounded-full w-8 h-8"></div>
+          ) : (
+            "재요청"
+          )}
         </button>
         <button className="w-1/4 h-full text-lg transition-all duration-150 bg-[#312a7a] text-white px-4 py-2 rounded hover:opacity-80">
-          일정<br></br>반영
+          일정
+          <br />
+          반영
         </button>
       </div>
-      <div className="pb-24"></div>{" "}
-      {/* 마지막 요소가 가려지지 않도록 공간 추가 */}
+      <div className="pb-24"></div>
     </div>
   );
 };
