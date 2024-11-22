@@ -8,15 +8,16 @@ export const handleRecording = async (audioBlob) => {
 
     console.log("audioFile:", audioBlob);
 
-    const response = await axiosInstance.post("/stt", formData, {
+    const response = await axiosInstance.post("/qwDioSA/DnbDiw", formData, {
       headers: {
         "Content-Type": "application/octet-stream",
       },
     });
     console.log("STT response:", response.data);
-    return response.data.text; // 서버에서 변환된 텍스트 반환
+    return response.data; // 서버에서 변환된 텍스트 반환
   } catch (error) {
     console.error("STT failed:", error);
     alert("음성 인식 실패: 다시 시도해주세요."); // 사용자에게 에러 표시
+    return null;
   }
 };

@@ -3,24 +3,33 @@ import { create } from "zustand";
 const useStore = create((set) => ({
   selectedIcon: null,
   lastSelectedIcon: null, // 마지막 선택된 아이콘 상태 추가
+
   setSelectedIcon: (icon) =>
     set((state) => ({
       selectedIcon: icon,
-      lastSelectedIcon: icon,
-      isSidebarOpen: true,
-    })), // 아이콘 클릭 시 상태 변경 및 열림
+      lastSelectedIcon: icon, // 아이콘을 선택할 때 마지막 아이콘 정보 업데이트
+      isSidebarOpen: true, // 사이드바를 자동으로 엶
+    })),
+
   isSidebarOpen: false,
   setIsSidebarOpen: (isOpen) =>
     set((state) => ({
       isSidebarOpen: isOpen,
-      selectedIcon: isOpen ? state.lastSelectedIcon : null, // 열릴 때 마지막 선택된 아이콘 유지
+      selectedIcon: isOpen ? state.lastSelectedIcon : null, // 열릴 때 마지막 아이콘 유지
     })),
-  closeSidebar: () => set({ isSidebarOpen: false, selectedIcon: null }), // 닫으면 선택 초기화
+
+  closeSidebar: () =>
+    set((state) => ({
+      isSidebarOpen: false,
+      selectedIcon: null, // 사이드바를 닫으면 아이콘 선택 초기화
+    })),
 
   toggleSidebar: () =>
     set((state) => ({
       isSidebarOpen: !state.isSidebarOpen,
-      selectedIcon: !state.isSidebarOpen ? "" : null,
+      selectedIcon: !state.isSidebarOpen
+        ? state.lastSelectedIcon // 열릴 때 마지막 아이콘 유지
+        : null, // 닫힐 때 아이콘 선택 해제
     })),
 
   currentWeek: new Date(),

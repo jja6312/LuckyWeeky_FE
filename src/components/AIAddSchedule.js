@@ -8,7 +8,7 @@ const AIAddSchedule = () => {
   const { mode, toggleMode } = useAiInputStore(); // Zustand에서 상태 가져오기
 
   return (
-    <div className="p-4 bg-white shadow-lg rounded-lg max-w-md mx-auto">
+    <div className="p-4 bg-white  h-full shadow-lg rounded-lg max-w-md mx-auto">
       <div className="flex w-full justify-between mb-3">
         <SlideTitle title="🤖AI 일정 추가" />
         <div className="flex items-center">
