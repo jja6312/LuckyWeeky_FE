@@ -27,32 +27,42 @@ const AISuggestionSchedule = () => {
   const [reRequestText, setReRequestText] = useState(""); // 재요청 내용
 
   useEffect(() => {
-    const grouped = [
-      { dayName: "Monday", tasks: [] },
-      { dayName: "Tuesday", tasks: [] },
-      { dayName: "Wednesday", tasks: [] },
-      { dayName: "Thursday", tasks: [] },
-      { dayName: "Friday", tasks: [] },
-      { dayName: "Saturday", tasks: [] },
-      { dayName: "Sunday", tasks: [] },
-    ];
+    // 날짜 기반으로 정렬
+    const schedulesWithDates = schedules.flatMap((schedule) =>
+      schedule.subSchedules.map((sub) => ({
+        mainScheduleTitle: schedule.mainTitle,
+        subScheduleTitle: sub.title,
+        start_time: format(parseISO(sub.startTime), "HH:mm"),
+        end_time: format(parseISO(sub.endTime), "HH:mm"),
+        date: parseISO(sub.startTime),
+        color: selectedColor,
+      }))
+    );
 
-    schedules.forEach((schedule) => {
-      schedule.subSchedules.forEach((sub) => {
-        const dayIndex = parseISO(sub.startTime).getDay();
-        grouped[dayIndex].tasks.push({
-          mainScheduleTitle: schedule.mainTitle,
-          subScheduleTitle: sub.title,
-          start_time: format(parseISO(sub.startTime), "HH:mm"),
-          end_time: format(parseISO(sub.endTime), "HH:mm"),
-          color: selectedColor,
-        });
-      });
-    });
+    // 날짜 순으로 정렬
+    schedulesWithDates.sort((a, b) => a.date - b.date);
 
-    setGroupedSchedule(grouped.filter((day) => day.tasks.length > 0));
+    // 날짜별로 그룹화
+    const grouped = schedulesWithDates.reduce((acc, item) => {
+      const dayName = format(item.date, "EEEE"); // 요일 이름
+      if (!acc[dayName]) {
+        acc[dayName] = [];
+      }
+      acc[dayName].push(item);
+      return acc;
+    }, {});
+
+    // 그룹화된 데이터를 배열로 변환
+    const groupedArray = Object.keys(grouped).map((dayName) => ({
+      dayName,
+      tasks: grouped[dayName],
+    }));
+
+    setGroupedSchedule(groupedArray);
+
+    // 초기 expandedDays 설정
     const initialExpandedDays = {};
-    grouped.forEach((day, index) => {
+    groupedArray.forEach((_, index) => {
       initialExpandedDays[index] = true;
     });
     setExpandedDays(initialExpandedDays);
@@ -121,7 +131,6 @@ const AISuggestionSchedule = () => {
       // Zustand의 replaceSchedule 호출
       replaceSchedule({ result: "true", schedule: reGeneratedSchedule });
 
-      alert("AI 재요청 성공! 일정이 업데이트되었습니다.");
       resetForm(); // 폼 초기화
       setReRequestText("");
     } catch (error) {
@@ -271,7 +280,7 @@ const AISuggestionSchedule = () => {
           onChange={(e) => setReRequestText(e.target.value)}
         ></textarea>
         <button
-          className="w-1/4 h-full bg-[#f59e0b] text-white rounded p-2 hover:opacity-80 transition flex justify-center items-center"
+          className="w-1/4 h-full border-2 border-[#312a7a] text-[#312a7a] rounded p-2 hover:opacity-80 transition flex justify-center items-center"
           onClick={handleReRequest}
         >
           {isReRequestLoading ? (
