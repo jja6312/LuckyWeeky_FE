@@ -1,15 +1,17 @@
-import React from "react";
+import React, { useRef, useState } from "react";
 import useAiInputStore from "../stores/useAiInputStore";
-
 import useStore from "../stores/useStore";
 import { handleRecording } from "../api/scheduleAi/handleRecording";
 import { createAiSchedule } from "../api/scheduleAi/createAiSchedule";
+import Logo from "../assets/logo/logo.png";
+import "../css/AIAddVoice.css";
 
 const AIAddVoice = () => {
   const {
     recording,
     transcription,
     visualEffect,
+    pushToSchedules,
     startRecording,
     stopRecording,
     resetForm,
@@ -17,114 +19,68 @@ const AIAddVoice = () => {
   } = useAiInputStore();
 
   const { setSelectedIcon } = useStore();
-
-  function audioBufferToWav(buffer) {
-    const numOfChannels = buffer.numberOfChannels;
-    const length = buffer.length * numOfChannels * 2 + 44;
-    const bufferArray = new ArrayBuffer(length);
-    const view = new DataView(bufferArray);
-    let offset = 0;
-
-    const writeString = (str) => {
-      for (let i = 0; i < str.length; i++) {
-        view.setUint8(offset, str.charCodeAt(i));
-        offset += 1;
-      }
-    };
-
-    const writeInt16 = (input, offset) => {
-      for (let i = 0; i < input.length; i++, offset += 2) {
-        view.setInt16(offset, input[i] * 0x7fff, true);
-      }
-    };
-
-    // WAV Header
-    writeString("RIFF");
-    view.setUint32(offset, length - 8, true);
-    offset += 4;
-    writeString("WAVE");
-    writeString("fmt ");
-    view.setUint32(offset, 16, true);
-    offset += 4;
-    view.setUint16(offset, 1, true);
-    offset += 2;
-    view.setUint16(offset, numOfChannels, true);
-    offset += 2;
-    view.setUint32(offset, buffer.sampleRate, true);
-    offset += 4;
-    view.setUint32(offset, buffer.sampleRate * numOfChannels * 2, true);
-    offset += 4;
-    view.setUint16(offset, numOfChannels * 2, true);
-    offset += 2;
-    view.setUint16(offset, 16, true);
-    offset += 2;
-    writeString("data");
-    view.setUint32(offset, length - 44, true);
-    offset += 4;
-
-    // Write PCM data
-    for (let i = 0; i < numOfChannels; i++) {
-      writeInt16(buffer.getChannelData(i), offset);
-    }
-
-    return bufferArray;
-  }
-
-  async function convertToWav(audioBlob) {
-    const audioContext = new AudioContext();
-    const audioData = await audioBlob.arrayBuffer();
-    const audioBuffer = await audioContext.decodeAudioData(audioData);
-
-    const wavBuffer = audioBufferToWav(audioBuffer); // PCM 데이터로 변환
-    console.log("Converted WAV Blob:", wavBuffer);
-    return new Blob([wavBuffer], { type: "audio/wav" });
-  }
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false); // 드롭다운 상태 관리
+  const [loading, setLoading] = useState(false); // 로딩 상태 관리
 
   const handleStartRecording = async () => {
     try {
-      console.log("Starting recording...");
       startRecording();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      console.log("Microphone access granted");
-
       const mediaRecorder = new MediaRecorder(stream);
-      const audioChunks = [];
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
 
       mediaRecorder.ondataavailable = (event) => {
-        console.log("Audio data available:", event.data);
-        audioChunks.push(event.data);
+        audioChunksRef.current.push(event.data);
       };
 
       mediaRecorder.onstop = async () => {
-        console.log("Recording stopped");
-        const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
-        const wavBlob = await convertToWav(audioBlob);
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: "audio/webm",
+        });
 
         try {
-          const transcription = await handleRecording(wavBlob);
+          const transcription = await handleRecording(audioBlob);
           setTranscription(transcription);
-          console.log("STT Transcription:", transcription);
+          if (transcription && transcription.result === "true") {
+            pushToSchedules({
+              result: transcription.result,
+              schedule: transcription.schedule,
+            });
+            setSelectedIcon("suggestionSchedule");
+          } else {
+            alert("음성을 더 크게 녹음해주세요.");
+          }
         } catch (error) {
           console.error("STT failed:", error);
         } finally {
+          setLoading(false); // 로딩 종료
           stopRecording();
           stream.getTracks().forEach((track) => track.stop());
         }
       };
 
       mediaRecorder.start();
-      console.log("Recording started");
-
-      setTimeout(() => {
-        if (mediaRecorder.state === "recording") {
-          mediaRecorder.stop();
-          console.log("Recording forcibly stopped");
-        }
-      }, 5000);
     } catch (error) {
-      console.error("Failed to start recording:", error);
       alert("녹음 시작에 실패했습니다. 마이크 권한을 확인해주세요.");
     }
+  };
+
+  const handleStopRecording = () => {
+    if (loading) return; // 이미 로딩 중일 때 추가 작업 방지
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state === "recording"
+    ) {
+      setLoading(true); // 로딩 상태 활성화
+      mediaRecorderRef.current.stop();
+    }
+  };
+
+  const toggleDropdown = () => {
+    setIsDropdownOpen((prev) => !prev);
   };
 
   return (
@@ -133,30 +89,55 @@ const AIAddVoice = () => {
 
       {/* 녹음 버튼 */}
       <div
-        className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center shadow-lg cursor-pointer transition-transform ${
-          recording ? "bg-red-500 animate-pulse" : "bg-blue-500"
-        } ${visualEffect ? "scale-110" : "scale-100"}`}
-        onClick={recording ? stopRecording : handleStartRecording}
+        className={`recording-button flex items-center justify-center w-20 h-20 rounded-full cursor-pointer transition-all ${
+          recording
+            ? loading
+              ? "bg-gradient-to-r from-green-500 via-green-600 to-green-500 animate-spin"
+              : "bg-green-600"
+            : "bg-red-500 hover:bg-blue-200"
+        }`}
+        onClick={recording ? handleStopRecording : handleStartRecording}
       >
-        <span className="text-white text-2xl">{recording ? "🔴" : "🎤"}</span>
+        {!loading && (
+          <img
+            src={Logo}
+            alt="logo"
+            className={`w-full ${recording && "opacity-0"}`}
+          />
+        )}
       </div>
 
-      <p className="mt-4 text-gray-600">
-        {recording ? "녹음 중..." : "클릭하여 녹음 시작"}
-      </p>
+      {/* 상태 메시지 */}
+      <div
+        className={`mt-4 flex items-center justify-center ${
+          recording ? "text-red-600" : "text-gray-600"
+        }`}
+      >
+        {recording
+          ? loading
+            ? "로딩 중..."
+            : "녹음 중..."
+          : "클릭하여 녹음 시작"}
+        {/* ? 버튼 */}
+        <div
+          className="floating-icon ml-2 rounded-full bg-gray-500 w-6 h-6 text-white flex justify-center items-center text-lg cursor-pointer"
+          onClick={toggleDropdown}
+        >
+          ?
+        </div>
+      </div>
 
       {/* 음성 인식 결과 */}
       {transcription && (
         <div className="mt-4 p-4 bg-gray-100 rounded shadow">
           <h3 className="text-lg font-semibold">음성 인식 결과:</h3>
           <p className="mt-2 text-gray-800">{transcription}</p>
-          {/* 제출 버튼 */}
           <button
             className="w-full bg-[#312a7a] text-white rounded p-2 hover:opacity-80 transition"
             onClick={() => {
               createAiSchedule({
-                formData: { transcription }, // formData에 transcription만 포함
-                validateAll: () => true, // 밸리데이션 항상 통과
+                formData: { transcription },
+                validateAll: () => true,
                 resetForm,
                 setSelectedIcon,
               });
@@ -167,10 +148,34 @@ const AIAddVoice = () => {
         </div>
       )}
 
-      {/* 녹음 안내 */}
-      <p className="mt-4 text-xs text-gray-400">
-        음성을 클릭하면 녹음을 시작합니다.
-      </p>
+      {/* 드롭다운 */}
+      {isDropdownOpen && (
+        <div className="dropdown mt-4">
+          <div className="flex flex-col border-2 border-gray-300 rounded-lg p-4">
+            <p className="font-semibold text-gray-500 pb-4">녹음 예시</p>
+            <div className="flex flex-col items-start text-sm space-y-4">
+              <p className="flex flex-col items-start">
+                <span>1️⃣ 어떤 일정? :</span>
+                <span className="text-gray-500">➡ 헬스장 가려고하는데</span>
+              </p>
+              <p className="flex flex-col items-start">
+                <span>2️⃣ 언제까지? :</span>
+                <span className="text-gray-500">➡ 일주일 내내</span>
+              </p>
+              <p className="flex flex-col items-start">
+                <span>3️⃣ 가능한 시간은? :</span>
+                <span className="text-gray-500">➡ 하루 1시간</span>
+              </p>
+              <p className="flex flex-col items-start">
+                <span>4️⃣ 구체적인 일정이 있나요? :</span>
+                <span className="text-gray-500">
+                  ➡ 3분할로 운동할 예정이야.
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

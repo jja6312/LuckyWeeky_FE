@@ -284,7 +284,7 @@ const AISuggestionSchedule = () => {
           onClick={handleReRequest}
         >
           {isReRequestLoading ? (
-            <div className="animate-spin border-t-4 border-white border-solid rounded-full w-8 h-8"></div>
+            <div className="animate-spin border-t-4 border-[#312a7a] border-solid rounded-full w-8 h-8"></div>
           ) : (
             "재요청"
           )}
