@@ -121,7 +121,7 @@ const Signup = () => {
       birthDate: "",
     };
     const emailRegex = /\S+@\S+\.\S+/;
-    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d!@#$%^&*]{8,}$/;
 
     if (!formData.name.trim()) {
       newErrors.name = "이름을 입력해주세요.";
@@ -167,7 +167,7 @@ const Signup = () => {
       password: formData.password,
       birthDate: formData.birthDate,
     });
-    
+
     // FormData 객체 생성
     const data = new FormData();
     data.append("user", user);
@@ -178,9 +178,9 @@ const Signup = () => {
     }
     const userSignupResult = await registerUser(data);
     Swal.fire({
-      title: userSignupResult?"✨ 환영합니다 ✨":"회원가입 실패",
-      text: userSignupResult?"회원가입이 완료되었습니다":"",
-      icon: userSignupResult?"success":"fail",
+      title: userSignupResult ? "✨ 환영합니다 ✨" : "회원가입 실패",
+      text: userSignupResult ? "회원가입이 완료되었습니다" : "",
+      icon: userSignupResult ? "success" : "error",
       timer: 1200, // 0.5초 후 자동 닫힘
       timerProgressBar: true,
       showConfirmButton: false,
@@ -192,8 +192,8 @@ const Signup = () => {
         htmlContainer: "text-gray-100",
       },
     });
-    if(userSignupResult){
-      navigate("/login");      
+    if (userSignupResult) {
+      navigate("/login");
     }
   };
 
@@ -265,8 +265,9 @@ const Signup = () => {
               placeholder="이름"
               value={formData.name}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded focus:outline-none focus:border-indigo-500 ${errors.name ? "border-red-500" : "border-gray-300"
-                }`}
+              className={`w-full px-3 py-2 border rounded focus:outline-none focus:border-indigo-500 ${
+                errors.name ? "border-red-500" : "border-gray-300"
+              }`}
             />
             {errors.name && (
               <p className="mt-1 text-sm text-red-500 text-left">
@@ -283,8 +284,9 @@ const Signup = () => {
               placeholder="이메일"
               value={formData.email}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded focus:outline-none focus:border-indigo-500 ${errors.email ? "border-red-500" : "border-gray-300"
-                }`}
+              className={`w-full px-3 py-2 border rounded focus:outline-none focus:border-indigo-500 ${
+                errors.email ? "border-red-500" : "border-gray-300"
+              }`}
             />
             {errors.email && (
               <p className="mt-1 text-sm text-red-500 text-left">
@@ -301,8 +303,9 @@ const Signup = () => {
               placeholder="비밀번호"
               value={formData.password}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded focus:outline-none focus:border-indigo-500 ${errors.password ? "border-red-500" : "border-gray-300"
-                }`}
+              className={`w-full px-3 py-2 border rounded focus:outline-none focus:border-indigo-500 ${
+                errors.password ? "border-red-500" : "border-gray-300"
+              }`}
             />
             {errors.password && (
               <p className="mt-1 text-sm text-red-500 text-left">
@@ -319,8 +322,9 @@ const Signup = () => {
               placeholder="비밀번호 확인"
               value={formData.confirmPassword}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded focus:outline-none focus:border-indigo-500 ${errors.confirmPassword ? "border-red-500" : "border-gray-300"
-                }`}
+              className={`w-full px-3 py-2 border rounded focus:outline-none focus:border-indigo-500 ${
+                errors.confirmPassword ? "border-red-500" : "border-gray-300"
+              }`}
             />
             {errors.confirmPassword && (
               <p className="mt-1 text-sm text-red-500 text-left">
@@ -337,8 +341,9 @@ const Signup = () => {
               placeholder="생년월일"
               value={formData.birthDate}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded focus:outline-none focus:border-indigo-500 ${errors.birthDate ? "border-red-500" : "border-gray-300"
-                }`}
+              className={`w-full px-3 py-2 border rounded focus:outline-none focus:border-indigo-500 ${
+                errors.birthDate ? "border-red-500" : "border-gray-300"
+              }`}
             />
             {errors.birthDate && (
               <p className="mt-1 text-sm text-red-500 text-left">

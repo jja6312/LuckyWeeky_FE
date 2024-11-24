@@ -1,13 +1,15 @@
 import React, { useState } from "react";
 import Logo from "../../assets/logo/logo.png";
 import { useNavigate } from "react-router-dom";
-import axiosInstance from "../../api/axiosInstance"; 
+import axiosInstance from "../../api/axiosInstance";
 import Swal from "sweetalert2";
 
 const Login = () => {
   const navigate = useNavigate();
   const [credentials, setCredentials] = useState({
-    email: sessionStorage.getItem("email")? sessionStorage.getItem("email"): "", // sessionStorage에 email 값이 있으면 초기화
+    email: sessionStorage.getItem("email")
+      ? sessionStorage.getItem("email")
+      : "", // sessionStorage에 email 값이 있으면 초기화
     password: "",
   });
   const [errors, setErrors] = useState({ email: "", password: "" });
@@ -78,17 +80,17 @@ const Login = () => {
         "Content-Type": "application/json", // FormData 전송 시 Content-Type 지정
       },
     });
-    console.log(response);
-    
+    console.log("loginResponse", response);
+
     const accessToken = response.data.accessToken;
-    if(accessToken){
-      sessionStorage.setItem("accessToken",accessToken);
+    if (accessToken) {
+      sessionStorage.setItem("accessToken", accessToken);
       sessionStorage.removeItem("email");
-      navigate("/main"); 
-    }else{
+      navigate("/main");
+    } else {
       Swal.fire({
         title: "로그인 다시시도해주세요",
-        icon: "fail",
+        icon: "error",
         timer: 1200, // 0.5초 후 자동 닫힘
         timerProgressBar: true,
         showConfirmButton: false,
