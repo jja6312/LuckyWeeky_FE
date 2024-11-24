@@ -43,9 +43,6 @@ const AIAddText = () => {
       // Zustand 상태 업데이트
       pushToSchedules({ result: "true", schedule: aiGeneratedResult });
 
-      alert(
-        `AI 일정 생성 성공!\n생성된 일정: ${JSON.stringify(aiGeneratedResult)}`
-      );
       resetForm(); // 폼 초기화
       setSelectedIcon("suggestionSchedule");
     } catch (error) {
