@@ -8,6 +8,7 @@ import {
   FaMinusCircle,
   FaPlusCircle,
 } from "react-icons/fa";
+import axiosInstance from "../api/axiosInstance";
 
 const ScheduleModal = ({ schedule, position, onClose, isClosing }) => {
   const {
@@ -79,50 +80,47 @@ const ScheduleModal = ({ schedule, position, onClose, isClosing }) => {
     return isInProgress; // 진행 중인 일정만 표시
   });
 
-  const handleSave = () => {
-    const isCustomInput = modalState.mainScheduleTitle === "목표 추가";
-    const scheduleToSave = {
-      mainScheduleTitle:
+  // **서버에 일정 생성 요청**
+
+  const handleSave = async () => {
+    // ScheduleData 생성
+    const scheduleData = {
+      userId: 101, // 로그인한 사용자 ID (예시)
+      mainTitle:
         modalState.mainScheduleTitle === "목표 추가" && modalState.customInput
           ? modalState.customInput
           : modalState.mainScheduleTitle,
-      subScheduleTitle: modalState.subScheduleTitle,
-      start_time: modalState.startTime,
-      end_time: modalState.endTime,
-      description: modalState.description,
       color: modalState.color,
-      status,
+      startTime: format(modalState.startTime, "yyyy-MM-dd HH:mm:ss"),
+      endTime: format(modalState.endTime, "yyyy-MM-dd HH:mm:ss"),
+      subSchedules: [
+        {
+          title: modalState.subScheduleTitle, // SubScheduleDto의 title 필드
+          description: modalState.description, // SubScheduleDto의 description 필드
+          startTime: format(modalState.startTime, "yyyy-MM-dd HH:mm:ss"), // SubScheduleDto의 startTime 필드
+          endTime: format(modalState.endTime, "yyyy-MM-dd HH:mm:ss"), // SubScheduleDto의 endTime 필드
+        },
+      ],
     };
 
-    if (isCustomInput) {
-      // {
-      //   main_schedule_id: 1,
-      //   user_id: 101,
-      //   title: "도커 공부",
-      //   start_time: new Date("2023-11-16T09:00:00"),
-      //   end_time: new Date("2029-11-16T10:00:00"),
-      //   color: "#FF5733",
-      //   created_at: new Date("2023-11-01T12:00:00"),
-      //   updated_at: new Date("2023-11-10T12:00:00"),
-      // }
-      const newMainSchedule = {
-        main_schedule_id: mainSchedules.length + 1,
+    try {
+      const response = await axiosInstance.post(
+        "/UAKRPCjN/OqwSjA",
+        scheduleData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
-        user_id: 101,
-        title: modalState.customInput,
-        start_time: modalState.startTime,
-        end_time: modalState.endTime,
-        color: modalState.color,
-        created_at: new Date(),
-        updated_at: new Date(),
-      };
-
-      addMainSchedule(newMainSchedule);
+      console.log("Created schedule response:", response.data);
+      alert("일정이 성공적으로 생성되었습니다!");
+      onClose();
+    } catch (error) {
+      console.error("Failed to save schedule:", error);
+      alert("일정 저장에 실패했습니다. 다시 시도해주세요.");
     }
-
-    saveSubSchedule(scheduleToSave);
-    setSelectedSchedule(scheduleToSave);
-    onClose();
   };
 
   const handleCancel = () => {
