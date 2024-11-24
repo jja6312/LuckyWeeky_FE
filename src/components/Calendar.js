@@ -14,9 +14,16 @@ import useScheduleStore from "../stores/useScheduleStore";
 import ScheduleModal from "./ScheduleModal";
 import WeekHeader from "./WeekHeader";
 import Swal from "sweetalert2";
+import { getSchedulesByDate } from "../api/schedule/getSchedulesByDate";
+import { deleteSubScheduleById } from "../api/schedule/deleteSubScheduleById";
 
 const Calendar = () => {
-  const { selectedSchedule, setSelectedSchedule } = useScheduleStore();
+  const {
+    selectedSchedule,
+    setSelectedSchedule,
+    subschedules,
+    setSubschedules,
+  } = useScheduleStore();
   const { currentWeek, setPrevWeek, setNextWeek, setWeek, closeSidebar } =
     useStore();
 
@@ -27,8 +34,7 @@ const Calendar = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalClosing, setModalClosing] = useState(false);
   const [modalPosition, setModalPosition] = useState({ top: 0, left: 0 });
-
-  const subschedules = useScheduleStore((state) => state.subschedules);
+  const [hidden, setHidden] = useState(false);
 
   const startOfCurrentWeek = startOfWeek(currentWeek, { weekStartsOn: 1 });
   const endOfCurrentWeek = endOfWeek(currentWeek, { weekStartsOn: 1 });
@@ -50,7 +56,7 @@ const Calendar = () => {
       setModalOpen(false);
       setModalClosing(false);
       setSelectedSchedule(null);
-    }, 400);
+    }, 600);
   };
 
   const handleTimeBlockClick = (dayIndex, hour, quarter, event) => {
@@ -97,7 +103,7 @@ const Calendar = () => {
     closeModal();
   };
 
-  const handleDelete = () => {
+  const handleDelete = (schedule) => {
     Swal.fire({
       title: "<strong style='font-size:18px'>정말 삭제하시겠습니까?</strong>",
       html: "<p style='font-size:12px;color:#555'>삭제된 데이터는 복구할 수 없습니다.</p>",
@@ -117,8 +123,10 @@ const Calendar = () => {
         cancelButton:
           "bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 transition duration-150", // 취소 버튼
       },
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
+        await deleteSubScheduleById(schedule.subScheduleTitle);
+
         Swal.fire({
           title: "✨ 삭제 완료! ✨",
           text: "데이터가 성공적으로 삭제되었습니다.",
@@ -137,6 +145,10 @@ const Calendar = () => {
         });
         closeSidebar();
         console.log("삭제가 완료되었습니다.");
+        setTimeout(() => {
+          // 0.4초 후에 새로고침
+          window.location.reload();
+        }, 400);
       } else {
         console.log("삭제가 취소되었습니다.");
       }
@@ -198,8 +210,8 @@ const Calendar = () => {
         divs.push(
           <div
             key={`${index}-${currentStart.toISOString()}`}
-            className="absolute flex flex-col cursor-pointer hover:opacity-70 transition-all duration-150
-            group"
+            className={`absolute flex flex-col cursor-pointer hover:opacity-70 transition-all duration-150
+            group `}
             style={{
               top: `${minutesFromTop}%`,
               height: `${scheduleHeight}%`,
@@ -235,7 +247,7 @@ const Calendar = () => {
                 className="text-xs text-gray-400 hover:text-[#312a7a]"
                 onClick={(e) => {
                   e.stopPropagation(); // 이벤트 전파 방지
-                  handleDelete();
+                  handleDelete(schedule);
                 }}
               />
             </div>
@@ -263,6 +275,34 @@ const Calendar = () => {
       console.log("일정 불러오기 완료");
     }
   }, [subschedules]); // subschedules가 변경될 때 실행
+
+  // 현재 주 일정 데이터를 백엔드에서 조회
+  useEffect(() => {
+    const fetchSchedules = async () => {
+      try {
+        const dateString = format(currentWeek, "yyyy-MM-dd HH:mm:ss");
+        const schedules = await getSchedulesByDate(dateString);
+
+        // 백엔드 데이터를 subschedules 형식으로 변환
+        const subschedulesFromBackend = schedules.flatMap((schedule) =>
+          schedule.subSchedules.map((subSchedule) => ({
+            mainScheduleTitle: schedule.mainTitle,
+            subScheduleTitle: subSchedule.title,
+            description: subSchedule.description,
+            start_time: new Date(subSchedule.startTime),
+            end_time: new Date(subSchedule.endTime),
+            color: schedule.color,
+          }))
+        );
+
+        setSubschedules(subschedulesFromBackend); // 상태 업데이트
+      } catch (error) {
+        console.error("일정 조회 중 오류 발생:", error);
+      }
+    };
+
+    fetchSchedules();
+  }, [currentWeek]);
 
   return (
     <div
