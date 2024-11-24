@@ -4,6 +4,8 @@ import useScheduleStore from "../stores/useScheduleStore";
 import { FaEdit, FaTrash, FaSave } from "react-icons/fa";
 import { format, parseISO } from "date-fns";
 import { reRequestAiSchedule } from "../api/scheduleAi/reRequestAiSchedule";
+import { saveAiSchedule } from "../api/scheduleAi/saveAiSchedule";
+import "../css/AISuggestionAccept.css";
 
 // 밝기 계산 함수
 const isColorDark = (color) => {
@@ -29,14 +31,19 @@ const AISuggestionSchedule = () => {
   useEffect(() => {
     // 날짜 기반으로 정렬
     const schedulesWithDates = schedules.flatMap((schedule) =>
-      schedule.subSchedules.map((sub) => ({
-        mainScheduleTitle: schedule.mainTitle,
-        subScheduleTitle: sub.title,
-        start_time: format(parseISO(sub.startTime), "HH:mm"),
-        end_time: format(parseISO(sub.endTime), "HH:mm"),
-        date: parseISO(sub.startTime),
-        color: selectedColor,
-      }))
+      schedule.subSchedules.map((sub) => {
+        const date = parseISO(sub.startTime);
+        return {
+          mainScheduleTitle: schedule.mainTitle,
+          subScheduleTitle: sub.title,
+          start_time: format(parseISO(sub.startTime), "HH:mm"),
+          end_time: format(parseISO(sub.endTime), "HH:mm"),
+          date,
+          startFullDateTime: sub.startTime,
+          endFullDateTime: sub.endTime,
+          color: selectedColor,
+        };
+      })
     );
 
     // 날짜 순으로 정렬
@@ -141,6 +148,83 @@ const AISuggestionSchedule = () => {
     }
   };
 
+  // 일정 반영 함수 구현
+  const scheduleAiAccept = async () => {
+    if (!schedules || schedules.length === 0) {
+      console.error("No schedules available for saving.");
+      alert("저장할 일정이 없습니다.");
+      return;
+    }
+
+    const scheduleData = {
+      mainTitle: schedules[0]?.mainTitle || "Default Title",
+      color: selectedColor || "#FFFFFF",
+      startTime: schedules[0]?.startTime
+        ? format(parseISO(schedules[0].startTime), "yyyy-MM-dd HH:mm:ss")
+        : null,
+      endTime: schedules[0]?.endTime
+        ? format(parseISO(schedules[0].endTime), "yyyy-MM-dd HH:mm:ss")
+        : null,
+      subSchedules: groupedSchedule.flatMap((day) =>
+        day.tasks.map((task) => ({
+          title: task.subScheduleTitle || "No Title",
+          description: task.description || "",
+          startTime: task.startFullDateTime
+            ? format(parseISO(task.startFullDateTime), "yyyy-MM-dd HH:mm:ss")
+            : null,
+          endTime: task.endFullDateTime
+            ? format(parseISO(task.endFullDateTime), "yyyy-MM-dd HH:mm:ss")
+            : null,
+        }))
+      ),
+    };
+
+    if (!scheduleData.subSchedules || scheduleData.subSchedules.length === 0) {
+      console.error("No subSchedules available for saving:", scheduleData);
+      alert("저장할 서브 일정이 없습니다.");
+      return;
+    }
+
+    try {
+      const response = await saveAiSchedule(scheduleData);
+
+      // 응답 데이터 확인
+      console.log("API Response:", response);
+      setTimeout(() => {
+        window.location.reload();
+      }, 600);
+      if (response && response.schedule) {
+        // 응답 데이터를 배열로 변환
+        const formattedSchedule = Array.isArray(response.schedule)
+          ? response.schedule
+          : [response.schedule];
+
+        // replaceSchedule 호출
+        replaceSchedule({ result: "true", schedule: formattedSchedule });
+        console.log("Schedule saved and updated successfully.");
+      } else {
+        console.error("Invalid API response format:", response);
+        alert("서버에서 잘못된 응답을 받았습니다.");
+      }
+    } catch (error) {
+      console.error("Failed to save schedule:", error);
+    }
+  };
+
+  useEffect(() => {
+    // 일정 추가 후 애니메이션 클래스 제거
+    const timer = setTimeout(() => {
+      setGroupedSchedule((prev) =>
+        prev.map((schedule) => ({
+          ...schedule,
+          animationClass: "", // 애니메이션 클래스 제거
+        }))
+      );
+    }, 1000); // 애니메이션 시간 (1초)
+
+    return () => clearTimeout(timer);
+  }, [groupedSchedule]);
+
   return (
     <div className="p-4 bg-white shadow-md rounded-md h-full overflow-y-auto relative">
       <h2 className="text-lg font-bold mb-4">아래와 같은 일정은 어떤가요?</h2>
@@ -188,7 +272,9 @@ const AISuggestionSchedule = () => {
             {day.tasks.map((task, taskIndex) => (
               <div
                 key={taskIndex}
-                className="p-4 rounded mb-2 flex flex-col space-y-2 relative"
+                className={`p-4 rounded mb-2 flex flex-col space-y-2 relative ${
+                  task.animationClass || ""
+                }`}
                 style={{
                   backgroundColor: task.color,
                   color: isColorDark(task.color) ? "white" : "black",
@@ -289,7 +375,10 @@ const AISuggestionSchedule = () => {
             "재요청"
           )}
         </button>
-        <button className="w-1/4 h-full text-lg transition-all duration-150 bg-[#312a7a] text-white px-4 py-2 rounded hover:opacity-80">
+        <button
+          className="w-1/4 h-full text-lg transition-all duration-150 bg-[#312a7a] text-white px-4 py-2 rounded hover:opacity-80"
+          onClick={scheduleAiAccept}
+        >
           일정
           <br />
           반영
