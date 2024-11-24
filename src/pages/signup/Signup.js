@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import Logo from "../../assets/logo/logo.png";
 import { useNavigate } from "react-router-dom";
 import defaultProfile from "../../assets/defaultProfile.png"; // 기본 프로필 이미지 추가
+import { registerUser } from "../../api/user/registerUser";
+import Swal from "sweetalert2";
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -154,10 +156,44 @@ const Signup = () => {
   };
 
   // 회원가입 제출 핸들러
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
-    if (validateAll()) {
-      navigate("/login");
+    if (!validateAll()) {
+      return;
+    }
+    const user = JSON.stringify({
+      username: formData.name,
+      email: formData.email,
+      password: formData.password,
+      birthDate: formData.birthDate,
+    });
+    
+    // FormData 객체 생성
+    const data = new FormData();
+    data.append("user", user);
+
+    // 파일이 존재할 경우에만 추가
+    if (formData.profileImage) {
+      data.append("file", formData.profileImage);
+    }
+    const userSignupResult = await registerUser(data);
+    Swal.fire({
+      title: userSignupResult?"✨ 환영합니다 ✨":"회원가입 실패",
+      text: userSignupResult?"회원가입이 완료되었습니다":"",
+      icon: userSignupResult?"success":"fail",
+      timer: 1200, // 0.5초 후 자동 닫힘
+      timerProgressBar: true,
+      showConfirmButton: false,
+      background: "linear-gradient(145deg, #f0f0f0, #e0e0e0)",
+      position: "top",
+      customClass: {
+        popup: "rounded-xl shadow-lg",
+        title: "text-xl font-bold text-indigo-700",
+        htmlContainer: "text-gray-100",
+      },
+    });
+    if(userSignupResult){
+      navigate("/login");      
     }
   };
 
@@ -229,9 +265,8 @@ const Signup = () => {
               placeholder="이름"
               value={formData.name}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded focus:outline-none focus:border-indigo-500 ${
-                errors.name ? "border-red-500" : "border-gray-300"
-              }`}
+              className={`w-full px-3 py-2 border rounded focus:outline-none focus:border-indigo-500 ${errors.name ? "border-red-500" : "border-gray-300"
+                }`}
             />
             {errors.name && (
               <p className="mt-1 text-sm text-red-500 text-left">
@@ -248,9 +283,8 @@ const Signup = () => {
               placeholder="이메일"
               value={formData.email}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded focus:outline-none focus:border-indigo-500 ${
-                errors.email ? "border-red-500" : "border-gray-300"
-              }`}
+              className={`w-full px-3 py-2 border rounded focus:outline-none focus:border-indigo-500 ${errors.email ? "border-red-500" : "border-gray-300"
+                }`}
             />
             {errors.email && (
               <p className="mt-1 text-sm text-red-500 text-left">
@@ -267,9 +301,8 @@ const Signup = () => {
               placeholder="비밀번호"
               value={formData.password}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded focus:outline-none focus:border-indigo-500 ${
-                errors.password ? "border-red-500" : "border-gray-300"
-              }`}
+              className={`w-full px-3 py-2 border rounded focus:outline-none focus:border-indigo-500 ${errors.password ? "border-red-500" : "border-gray-300"
+                }`}
             />
             {errors.password && (
               <p className="mt-1 text-sm text-red-500 text-left">
@@ -286,9 +319,8 @@ const Signup = () => {
               placeholder="비밀번호 확인"
               value={formData.confirmPassword}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded focus:outline-none focus:border-indigo-500 ${
-                errors.confirmPassword ? "border-red-500" : "border-gray-300"
-              }`}
+              className={`w-full px-3 py-2 border rounded focus:outline-none focus:border-indigo-500 ${errors.confirmPassword ? "border-red-500" : "border-gray-300"
+                }`}
             />
             {errors.confirmPassword && (
               <p className="mt-1 text-sm text-red-500 text-left">
@@ -305,9 +337,8 @@ const Signup = () => {
               placeholder="생년월일"
               value={formData.birthDate}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded focus:outline-none focus:border-indigo-500 ${
-                errors.birthDate ? "border-red-500" : "border-gray-300"
-              }`}
+              className={`w-full px-3 py-2 border rounded focus:outline-none focus:border-indigo-500 ${errors.birthDate ? "border-red-500" : "border-gray-300"
+                }`}
             />
             {errors.birthDate && (
               <p className="mt-1 text-sm text-red-500 text-left">

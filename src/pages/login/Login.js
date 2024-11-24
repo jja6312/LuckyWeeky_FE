@@ -1,10 +1,15 @@
 import React, { useState } from "react";
 import Logo from "../../assets/logo/logo.png";
 import { useNavigate } from "react-router-dom";
+import axiosInstance from "../../api/axiosInstance"; 
+import Swal from "sweetalert2";
 
 const Login = () => {
   const navigate = useNavigate();
-  const [credentials, setCredentials] = useState({ email: "", password: "" });
+  const [credentials, setCredentials] = useState({
+    email: sessionStorage.getItem("email")? sessionStorage.getItem("email"): "", // sessionStorage에 email 값이 있으면 초기화
+    password: "",
+  });
   const [errors, setErrors] = useState({ email: "", password: "" });
 
   const validateField = (name, value) => {
@@ -56,16 +61,45 @@ const Login = () => {
     return Object.values(newErrors).every((error) => error === "");
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (validateAll()) {
-      // 로그인 로직 구현 (예: axios를 이용한 서버 인증 요청)
-      // 예시:
-      // axios.post('/api/login', credentials)
-      //   .then(response => { navigate("/main"); })
-      //   .catch(error => { /* 오류 처리 */ });
-
+    if (!validateAll()) {
       navigate("/main");
+    }
+    const url = "/aB12Xz/LWyAtd";
+
+    const user = JSON.stringify({
+      email: credentials.email,
+      password: credentials.password,
+    });
+
+    const response = await axiosInstance.post(url, user, {
+      headers: {
+        "Content-Type": "application/json", // FormData 전송 시 Content-Type 지정
+      },
+    });
+    console.log(response);
+    
+    const accessToken = response.data.accessToken;
+    if(accessToken){
+      sessionStorage.setItem("accessToken",accessToken);
+      sessionStorage.removeItem("email");
+      navigate("/main"); 
+    }else{
+      Swal.fire({
+        title: "로그인 다시시도해주세요",
+        icon: "fail",
+        timer: 1200, // 0.5초 후 자동 닫힘
+        timerProgressBar: true,
+        showConfirmButton: false,
+        background: "linear-gradient(145deg, #f0f0f0, #e0e0e0)",
+        position: "top",
+        customClass: {
+          popup: "rounded-xl shadow-lg",
+          title: "text-xl font-bold text-indigo-700",
+          htmlContainer: "text-gray-100",
+        },
+      });
     }
   };
 
