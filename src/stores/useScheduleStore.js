@@ -16,6 +16,9 @@ const useScheduleStore = create(
         "#9F8170", // 고풍스러운 토프 브라운
       ],
 
+      subschedules: [], // 현재 일정 상태
+      setSubschedules: (subschedules) => set({ subschedules }), // 일정 업데이트 메서드
+
       // 메인 일정
       mainSchedules: [
         {

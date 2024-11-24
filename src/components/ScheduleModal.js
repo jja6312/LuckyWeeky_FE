@@ -116,6 +116,10 @@ const ScheduleModal = ({ schedule, position, onClose, isClosing }) => {
 
       console.log("Created schedule response:", response.data);
       alert("일정이 성공적으로 생성되었습니다!");
+      setTimeout(() => {
+        // 0.4초 후에 새로고침
+        window.location.reload();
+      }, 400);
       onClose();
     } catch (error) {
       console.error("Failed to save schedule:", error);
