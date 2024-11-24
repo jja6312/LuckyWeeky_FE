@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import Logo from "../../assets/logo/logo.png";
 import { useNavigate } from "react-router-dom";
 import defaultProfile from "../../assets/defaultProfile.png"; // 기본 프로필 이미지 추가
+import { registerUser } from "../../api/user/registerUser";
+import Swal from "sweetalert2";
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -119,7 +121,7 @@ const Signup = () => {
       birthDate: "",
     };
     const emailRegex = /\S+@\S+\.\S+/;
-    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d!@#$%^&*]{8,}$/;
 
     if (!formData.name.trim()) {
       newErrors.name = "이름을 입력해주세요.";
@@ -154,9 +156,43 @@ const Signup = () => {
   };
 
   // 회원가입 제출 핸들러
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
-    if (validateAll()) {
+    if (!validateAll()) {
+      return;
+    }
+    const user = JSON.stringify({
+      username: formData.name,
+      email: formData.email,
+      password: formData.password,
+      birthDate: formData.birthDate,
+    });
+
+    // FormData 객체 생성
+    const data = new FormData();
+    data.append("user", user);
+
+    // 파일이 존재할 경우에만 추가
+    if (formData.profileImage) {
+      data.append("file", formData.profileImage);
+    }
+    const userSignupResult = await registerUser(data);
+    Swal.fire({
+      title: userSignupResult ? "✨ 환영합니다 ✨" : "회원가입 실패",
+      text: userSignupResult ? "회원가입이 완료되었습니다" : "",
+      icon: userSignupResult ? "success" : "error",
+      timer: 1200, // 0.5초 후 자동 닫힘
+      timerProgressBar: true,
+      showConfirmButton: false,
+      background: "linear-gradient(145deg, #f0f0f0, #e0e0e0)",
+      position: "top",
+      customClass: {
+        popup: "rounded-xl shadow-lg",
+        title: "text-xl font-bold text-indigo-700",
+        htmlContainer: "text-gray-100",
+      },
+    });
+    if (userSignupResult) {
       navigate("/login");
     }
   };
