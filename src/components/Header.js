@@ -1,14 +1,16 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Logo from "../assets/logo/logo.png";
+import { logoutUser } from "../api/user/logoutUser";
 
 const Header = () => {
   const navigate = useNavigate();
   const location = useLocation(); // 현재 URL 정보를 가져옴
 
-  const handleButtonClick = () => {
+  const handleButtonClick = async () => {
     if (location.pathname === "/main") {
       // 로그아웃 로직
+      const result = await logoutUser();
       alert("로그아웃되었습니다."); // 로그아웃 처리 로직 추가
       navigate("/"); // 로그아웃 후 메인 페이지로 이동
     } else {

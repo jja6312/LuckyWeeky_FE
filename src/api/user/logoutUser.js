@@ -1,13 +1,11 @@
 import axiosInstance from "../axiosInstance";
 
 // 로그아웃
-export const registerUser = async (userData) => {
-  const response = await axiosInstance.post("/aB12Xz/RClmJ", userData, {
+export const logoutUser = async () => {
+  const response = await axiosInstance.post("/aB12Xz/odsQk", null, {
     headers: {
-      "Content-Type": "multipart/form-data",
+      "Content-Type": "application/json",
     },
   });
-  const email = response.data.email;
-  sessionStorage.setItem("email",email);
-  return email?true:false;
+  return response.data.result;
 };
