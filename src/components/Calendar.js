@@ -279,22 +279,33 @@ const Calendar = () => {
   // 현재 주 일정 데이터를 백엔드에서 조회
   useEffect(() => {
     const fetchSchedules = async () => {
+      const dateString = format(currentWeek, "yyyy-MM-dd HH:mm:ss");
+      const schedules = await getSchedulesByDate(dateString);
+      console.log(schedules);
       try {
-        const dateString = format(currentWeek, "yyyy-MM-dd HH:mm:ss");
-        const schedules = await getSchedulesByDate(dateString);
-
         // 백엔드 데이터를 subschedules 형식으로 변환
+        // const subschedulesFromBackend = schedules.flatMap((schedule) =>
+        //   schedule.subSchedules.map((subSchedule) => ({
+        //     mainScheduleTitle: schedule.mainTitle,
+        //     subScheduleTitle: subSchedule.title,
+        //     description: subSchedule.description,
+        //     start_time: new Date(subSchedule.startTime),
+        //     end_time: new Date(subSchedule.endTime),
+        //     color: schedule.color,
+        //   }))
+        // );
         const subschedulesFromBackend = schedules.flatMap((schedule) =>
-          schedule.subSchedules.map((subSchedule) => ({
-            mainScheduleTitle: schedule.mainTitle,
-            subScheduleTitle: subSchedule.title,
-            description: subSchedule.description,
-            start_time: new Date(subSchedule.startTime),
-            end_time: new Date(subSchedule.endTime),
-            color: schedule.color,
-          }))
+          schedule.subSchedules
+            ? schedule.subSchedules.map((subSchedule) => ({
+                mainScheduleTitle: schedule.mainTitle,
+                subScheduleTitle: subSchedule.title,
+                description: subSchedule.description,
+                start_time: new Date(subSchedule.startTime),
+                end_time: new Date(subSchedule.endTime),
+                color: schedule.color,
+              }))
+            : []
         );
-
         setSubschedules(subschedulesFromBackend); // 상태 업데이트
       } catch (error) {
         console.error("일정 조회 중 오류 발생:", error);
