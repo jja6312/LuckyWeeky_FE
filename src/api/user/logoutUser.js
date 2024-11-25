@@ -7,5 +7,6 @@ export const logoutUser = async () => {
       "Content-Type": "application/json",
     },
   });
+  sessionStorage.removeItem("accessToken");
   return response.data.result;
 };
